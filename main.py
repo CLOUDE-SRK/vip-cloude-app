@@ -1,8 +1,10 @@
 import threading
 import uvicorn
 import os
-import subprocess
-import sys
+import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 def run_api():
     uvicorn.run(
@@ -21,4 +23,26 @@ if __name__ == "__main__":
 
     from bot import dp, bot
     from aiogram.utils import executor
-    executor.start_polling(dp, skip_updates=True)
+    from aiogram.utils.exceptions import TerminatedByOtherGetUpdates
+
+    # Deploy paytida eski va yangi instans bir lahza parallel ishlab qolishi
+    # mumkin (Render zero-downtime deploy). Bu holatda Telegram eski
+    # instansni "TerminatedByOtherGetUpdates" bilan to'xtatadi. Quyidagi
+    # retry mexanizmi shu holatda botni avtomatik qayta tiklaydi, shu
+    # bilan birga eski instansni ham xotirjam to'xtatadi (chunki u retry
+    # qilmaydi va process tugaydi, faqat yangisi qoladi).
+    while True:
+        try:
+            logging.info("Polling boshlanmoqda...")
+            executor.start_polling(dp, skip_updates=True)
+            break  # start_polling normal yopilsa, chiqamiz
+        except TerminatedByOtherGetUpdates:
+            logging.warning(
+                "TerminatedByOtherGetUpdates: boshqa instans aniqlandi. "
+                "5 soniyadan keyin qayta urinib ko'riladi."
+            )
+            time.sleep(5)
+        except Exception as e:
+            logging.error(f"Polling kutilmagan xato bilan to'xtadi: {e}")
+            time.sleep(5)
+            
