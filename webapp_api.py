@@ -72,6 +72,33 @@ async def get_balance(request: Request):
         "refs": refs_count
     }
 
+@app.get("/leaderboard")
+async def get_leaderboard():
+    """Top 10 foydalanuvchi referral soniga qarab"""
+    conn = db.get_conn()
+    rows = conn.execute("""
+        SELECT user_id, first_name, username, refs
+        FROM users
+        WHERE refs > 0
+        ORDER BY refs DESC
+        LIMIT 10
+    """).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        name = row["first_name"] or row["username"] or "Foydalanuvchi"
+        initials = name[:2].upper()
+        result.append({
+            "user_id": row["user_id"],
+            "name": name,
+            "initials": initials,
+            "refs": row["refs"]
+        })
+
+    return result
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+    
