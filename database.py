@@ -168,6 +168,56 @@ def approve_uc_order(order_id: int):
     conn.commit()
     conn.close()
 
+# ── ADMIN PANEL uchun qo'shimcha funksiyalar ───────────────
+def get_pending_uc_orders():
+    """Admin panelda ko'rsatish uchun barcha 'pending' UC buyurtmalarini,
+    foydalanuvchi ismi bilan birga qaytaradi (eng yangisi birinchi)."""
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT
+            o.id, o.user_id, o.pubg_id, o.uc_amount, o.price,
+            o.status, o.created_at,
+            u.first_name, u.username
+        FROM uc_orders o
+        LEFT JOIN users u ON u.user_id = o.user_id
+        WHERE o.status = 'pending'
+        ORDER BY o.id DESC
+    """).fetchall()
+    conn.close()
+    return rows
+
+def get_recent_uc_orders(limit: int = 50):
+    """Admin panelda 'barcha so'nggi buyurtmalar' ko'rinishi uchun
+    (pending + approved + cancelled), eng yangisi birinchi."""
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT
+            o.id, o.user_id, o.pubg_id, o.uc_amount, o.price,
+            o.status, o.created_at,
+            u.first_name, u.username
+        FROM uc_orders o
+        LEFT JOIN users u ON u.user_id = o.user_id
+        ORDER BY o.id DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    conn.close()
+    return rows
+
+def cancel_uc_order(order_id: int):
+    """Buyurtmani bekor qilish va foydalanuvchiga pulni qaytarish uchun
+    narxni qaytaradi (None bo'lsa - topilmadi yoki allaqachon ko'rib chiqilgan)."""
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT user_id, price, status FROM uc_orders WHERE id=?", (order_id,)
+    ).fetchone()
+    if not row or row["status"] != "pending":
+        conn.close()
+        return None
+    conn.execute("UPDATE uc_orders SET status='cancelled' WHERE id=?", (order_id,))
+    conn.commit()
+    conn.close()
+    return {"user_id": row["user_id"], "price": row["price"]}
+
 # ── VIP Orders ────────────────────────────────────────────
 def create_vip_order(user_id: int, vip_type: str, price: int) -> int:
     conn = get_conn()
@@ -195,3 +245,4 @@ def set_task_done(user_id: int, task_key: str):
     )
     conn.commit()
     conn.close()
+    
