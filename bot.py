@@ -53,14 +53,17 @@ async def cmd_start(message: types.Message):
 # ── Webapp sendData ──────────────────────────────────────
 @dp.message_handler(content_types=types.ContentType.WEB_APP_DATA)
 async def handle_webapp_data(message: types.Message):
+    logging.info(f"[WEB_APP_DATA] KELDI: raw={message.web_app_data.data}")
     try:
         data = json.loads(message.web_app_data.data)
-    except Exception:
+    except Exception as e:
+        logging.error(f"[WEB_APP_DATA] JSON PARSE XATO: {e}")
         return
 
     dtype = data.get("type")
     user_id = message.from_user.id
     user = message.from_user
+    logging.info(f"[WEB_APP_DATA] dtype={dtype} user_id={user_id} data={data}")
 
     # ── Topup so'rov ──
     if dtype == "topup_request":
@@ -82,17 +85,21 @@ async def handle_webapp_data(message: types.Message):
 
     # ── UC buyurtma ──
     elif dtype == "uc_purchase_request":
+        logging.info(f"[UC_ORDER] Boshlandi user_id={user_id}")
         pubg_id   = data.get("player_id", "")
         uc_amount = data.get("uc", 0)
         price     = data.get("price", 0)
 
         # Serverdan haqiqiy balansni tekshiramiz
         real_balance = db.get_balance(user_id)
+        logging.info(f"[UC_ORDER] real_balance={real_balance} price={price}")
         if real_balance < price:
+            logging.warning(f"[UC_ORDER] Balans yetarli emas: {real_balance} < {price}")
             await message.answer(f"❌ Balans yetarli emas.\nBalansingiz: {real_balance:,} so'm\nKerakli summa: {price:,} so'm")
             return
 
         ok = db.deduct_balance(user_id, price)
+        logging.info(f"[UC_ORDER] deduct_balance natija: {ok}")
         if not ok:
             await message.answer("❌ Balans yetarli emas.")
             return
@@ -112,7 +119,11 @@ async def handle_webapp_data(message: types.Message):
             f"💵 Narxi: <b>{price:,} so'm</b>\n"
             f"💰 Qolgan balans: {db.get_balance(user_id):,} so'm"
         )
-        await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML", reply_markup=kb)
+        try:
+            await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML", reply_markup=kb)
+            logging.info(f"[UC_ORDER] Admin ({ADMIN_ID}) ga xabar yuborildi")
+        except Exception as e:
+            logging.error(f"[UC_ORDER] Admin ga xabar yuborishda XATO: {e}")
         db.create_uc_order(user_id, pubg_id, uc_amount, price, 0)
 
     # ── VIP xarid ──
