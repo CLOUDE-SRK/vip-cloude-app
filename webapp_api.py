@@ -12,6 +12,7 @@ from urllib.parse import parse_qsl
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import database as db
 
@@ -293,6 +294,16 @@ async def admin_cancel_order(order_id: int, request: Request):
         pass
 
     return {"ok": True}
+
+
+@app.get("/admin")
+async def serve_admin_panel():
+    """Admin panel (admin.html) statik faylini qaytaradi.
+    Bu sahifaning o'zi ochiq, lekin undagi barcha API
+    so'rovlari (/admin/orders va h.k.) initData orqali
+    ADMIN_ID tekshiruvidan o'tishi shart - shuning uchun
+    sahifaning o'zini ochish xavfsiz."""
+    return FileResponse("admin.html", media_type="text/html")
 
 
 @app.get("/health")
