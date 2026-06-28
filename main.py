@@ -1,14 +1,16 @@
 import threading
+import subprocess
 import uvicorn
 import os
 import time
 import logging
-import asyncio
+import sys
 
 logging.basicConfig(level=logging.INFO)
 
 
 def run_api():
+    """FastAPI serverni alohida thread'da ishga tushiradi."""
     uvicorn.run(
         "webapp_api:app",
         host="0.0.0.0",
@@ -17,32 +19,37 @@ def run_api():
     )
 
 
-def run_admin_bot():
-    """Admin bot alohida thread'da, alohida event loop bilan ishlaydi.
-    Agar ADMIN_BOT_TOKEN sozlanmagan bo'lsa, bu thread shunchaki
-    hech narsa qilmay to'xtaydi - asosiy bot va API ishlashda davom etadi."""
+def run_admin_bot_process():
+    """Admin botni BUTUNLAY ALOHIDA Python process sifatida ishga
+    tushiradi (subprocess orqali). Bu yondashuv eng ishonchli, chunki
+    admin bot o'zining mustaqil Python interpreteri va event loop'iga
+    ega bo'ladi - asosiy bot/API bilan hech qanday thread yoki
+    event-loop ziddiyati bo'lishi mumkin emas.
+
+    Agar ADMIN_BOT_TOKEN sozlanmagan bo'lsa, bu funksiya hech narsa
+    qilmaydi - asosiy bot va API normal ishlashda davom etadi."""
     if not os.environ.get("ADMIN_BOT_TOKEN"):
         logging.warning("ADMIN_BOT_TOKEN sozlanmagan - admin bot ishga tushmaydi.")
         return
 
-    from aiogram.utils import executor as admin_executor
-    from aiogram.utils.exceptions import TerminatedByOtherGetUpdates
-    from admin_bot import admin_dp
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
     while True:
         try:
-            logging.info("Admin bot polling boshlanmoqda...")
-            admin_executor.start_polling(admin_dp, skip_updates=True)
-            break
-        except TerminatedByOtherGetUpdates:
-            logging.warning("Admin bot: TerminatedByOtherGetUpdates, 5s dan keyin qayta urinish.")
-            time.sleep(5)
+            logging.info("[Admin bot] Process ishga tushirilmoqda...")
+            # admin_bot.py ni alohida process sifatida ishga tushiramiz.
+            # Chiqish kodi 0 dan boshqa bo'lsa (xato/crash), qayta
+            # urinib ko'ramiz - bu deploy paytidagi vaqtinchalik
+            # TerminatedByOtherGetUpdates holatlarini ham qamrab oladi.
+            result = subprocess.run(
+                [sys.executable, "admin_bot.py"],
+                check=False
+            )
+            logging.warning(
+                f"[Admin bot] process tugadi (chiqish kodi: {result.returncode}). "
+                f"5 soniyadan keyin qayta ishga tushiriladi."
+            )
         except Exception as e:
-            logging.error(f"Admin bot kutilmagan xato bilan to'xtadi: {e}")
-            time.sleep(5)
+            logging.error(f"[Admin bot] processni ishga tushirishda xato: {e}")
+        time.sleep(5)
 
 
 if __name__ == "__main__":
@@ -52,7 +59,7 @@ if __name__ == "__main__":
     api_thread = threading.Thread(target=run_api, daemon=True)
     api_thread.start()
 
-    admin_bot_thread = threading.Thread(target=run_admin_bot, daemon=True)
+    admin_bot_thread = threading.Thread(target=run_admin_bot_process, daemon=True)
     admin_bot_thread.start()
 
     from bot import dp, bot
