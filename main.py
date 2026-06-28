@@ -1,12 +1,8 @@
-#!/usr/bin/env python3
-"""
-Bot va API serverni bir vaqtda ishga tushiradi.
-Render.com da bitta service uchun.
-"""
-import asyncio
 import threading
 import uvicorn
 import os
+import subprocess
+import sys
 
 def run_api():
     uvicorn.run(
@@ -16,15 +12,13 @@ def run_api():
         log_level="info"
     )
 
-async def run_bot():
-    from bot import dp, bot, db
-    db.init_db()
-    await dp.start_polling(bot)
-
 if __name__ == "__main__":
-    # API ni alohida thread da ishga tushir
+    import database as db
+    db.init_db()
+
     api_thread = threading.Thread(target=run_api, daemon=True)
     api_thread.start()
 
-    # Bot ni async loop da ishga tushir
-    asyncio.run(run_bot())
+    from bot import dp, bot
+    from aiogram.utils import executor
+    executor.start_polling(dp, skip_updates=True)
