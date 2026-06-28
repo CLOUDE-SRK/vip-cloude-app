@@ -1,0 +1,6 @@
+aiogram==3.13.1
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.7.4
+pydantic-core==2.18.4
+python-dotenv==1.0.1
