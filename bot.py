@@ -70,8 +70,6 @@ async def handle_webapp_data(message: types.Message):
         amount = data.get("amount", 0)
         method = data.get("method", "")
 
-        await message.answer("✅ So'rovingiz qabul qilindi!\nAdmin tez orada tasdiqlaydi. 🕐")
-
         admin_text = (
             f"💰 <b>Topup so'rov</b>\n\n"
             f"👤 <a href='tg://user?id={user.id}'>{user.first_name}</a>\n"
@@ -203,7 +201,13 @@ async def handle_photo(message: types.Message):
     user = message.from_user
     db.ensure_user(user.id, user.username, user.first_name)
 
-    await message.answer("✅ Skrinshot qabul qilindi!\nAdmin tez orada tasdiqlaydi. 🕐")
+    # Admin uchun istisno: admin yuborgan rasmlar bu cheklovga tushmaydi
+    if user.id != ADMIN_ID and db.has_screenshot_today(user.id):
+        await message.answer(
+            "❌ Siz bugun allaqachon 1 ta to'lov skrinshoti yubordingiz.\n"
+            "Kuniga faqat 1 marta skrinshot yuborish mumkin. Ertaga qayta urinib ko'ring."
+        )
+        return
 
     caption = (
         f"📸 <b>To'lov screenshoti</b>\n\n"
@@ -244,22 +248,12 @@ async def admin_confirm(message: types.Message):
         f"✅ {row['user_id']} ga {amount:,} so'm qo'shildi.\n"
         f"💰 Yangi balans: {new_balance:,} so'm"
     )
-    await bot.send_message(
-        row["user_id"],
-        f"✅ Hisobingizga <b>{amount:,} so'm</b> qo'shildi! 🎉\n"
-        f"💰 Joriy balans: <b>{new_balance:,} so'm</b>",
-        parse_mode="HTML"
-    )
 
 # ── Callback: UC tasdiqlash ──────────────────────────────
 @dp.callback_query_handler(lambda c: c.data.startswith("uc_done:"))
 async def uc_done(call: types.CallbackQuery):
     if call.from_user.id != ADMIN_ID:
         return await call.answer("❌ Ruxsat yo'q")
-    parts = call.data.split(":")
-    user_id = int(parts[1])
-    uc_amount = parts[2] if len(parts) > 2 else "?"
-    await bot.send_message(user_id, f"✅ <b>{uc_amount} UC</b> muvaffaqiyatli yuklandi! 🎮", parse_mode="HTML")
     await call.message.edit_reply_markup()
     await call.answer("✅ Tasdiqlandi")
 
@@ -309,4 +303,4 @@ async def task_no(call: types.CallbackQuery):
 if __name__ == "__main__":
     db.init_db()
     executor.start_polling(dp, skip_updates=True)
-        
+            
