@@ -122,6 +122,21 @@ async def get_balance(request: Request):
     }
 
 
+@app.get("/history")
+async def get_history(request: Request):
+    """Foydalanuvchining 'Tranzaksiyalar' bo'limi uchun barcha
+    tarixi (UC xaridlar, VIP xaridlar, hisob to'ldirishlar),
+    har birining HAQIQIY (serverdagi) holati bilan birga."""
+    init_data = request.headers.get("X-Init-Data", "")
+    user = verify_init_data(init_data)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid initData")
+
+    user_id = user["id"]
+    items = db.get_user_history(user_id)
+    return items
+
+
 @app.get("/leaderboard")
 async def get_leaderboard():
     """Top 10 foydalanuvchi referral soniga qarab"""
