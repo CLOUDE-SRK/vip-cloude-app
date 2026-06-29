@@ -212,6 +212,69 @@ def cancel_uc_order(order_id: int):
     conn.close()
     return {"user_id": row["user_id"], "price": row["price"]}
 
+def get_user_history(user_id: int, limit: int = 100):
+    """Foydalanuvchining barcha tranzaksiyalarini (UC xaridlar, VIP
+    xaridlar, hisob to'ldirishlar) bitta ro'yxatda, vaqt bo'yicha
+    kamayish tartibida qaytaradi. Webapp 'Tranzaksiyalar' bo'limi
+    aynan shu funksiyaga tayanadi."""
+    conn = get_conn()
+
+    uc_rows = conn.execute(
+        "SELECT id, uc_amount, price, pubg_id, status, created_at FROM uc_orders WHERE user_id=?",
+        (user_id,)
+    ).fetchall()
+
+    vip_rows = conn.execute(
+        "SELECT id, vip_type, price, status, created_at FROM vip_orders WHERE user_id=?",
+        (user_id,)
+    ).fetchall()
+
+    topup_rows = conn.execute(
+        "SELECT id, amount, method, status, created_at FROM topup_requests WHERE user_id=?",
+        (user_id,)
+    ).fetchall()
+
+    conn.close()
+
+    items = []
+
+    for r in uc_rows:
+        items.append({
+            "kind": "uc",
+            "id": r["id"],
+            "title": f"{r['uc_amount']:,} UC".replace(",", " "),
+            "sub": f"PUBG ID: {r['pubg_id']}",
+            "amount": -r["price"],
+            "status": r["status"],
+            "created_at": r["created_at"],
+        })
+
+    for r in vip_rows:
+        items.append({
+            "kind": "vip",
+            "id": r["id"],
+            "title": r["vip_type"],
+            "sub": "VIP paket",
+            "amount": -r["price"],
+            "status": r["status"],
+            "created_at": r["created_at"],
+        })
+
+    for r in topup_rows:
+        amount = r["amount"] if r["amount"] else 0
+        items.append({
+            "kind": "topup",
+            "id": r["id"],
+            "title": "Hisob to'ldirish",
+            "sub": r["method"] or "",
+            "amount": amount,
+            "status": r["status"],
+            "created_at": r["created_at"],
+        })
+
+    items.sort(key=lambda x: x["created_at"], reverse=True)
+    return items[:limit]
+
 # ── VIP Orders ────────────────────────────────────────────
 def create_vip_order(user_id: int, vip_type: str, price: int) -> int:
     conn = get_conn()
@@ -239,4 +302,3 @@ def set_task_done(user_id: int, task_key: str):
     )
     conn.commit()
     conn.close()
-        
