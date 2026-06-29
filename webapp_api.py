@@ -164,6 +164,50 @@ async def get_leaderboard():
     return result
 
 
+class VipOrderRequest(BaseModel):
+    package: str
+    price: int
+
+
+@app.post("/buy_vip")
+async def buy_vip(request: Request, body: VipOrderRequest):
+    """Foydalanuvchi VIP paket sotib olganda webapp shu endpointga
+    so'rov yuboradi. Balansni tekshiradi, kamaytiradi va vip_orders
+    jadvaliga 'approved' holatda yozadi (shu bilan tarixda ko'rinadi)."""
+    init_data = request.headers.get("X-Init-Data", "")
+    user = verify_init_data(init_data)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid initData")
+
+    user_id = user["id"]
+    db.ensure_user(user_id, user.get("username"), user.get("first_name"))
+
+    ok = db.deduct_balance(user_id, body.price)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Balans yetarli emas")
+
+    order_id = db.create_vip_order(user_id, body.package, body.price)
+
+    try:
+        import httpx
+        admin_text = (
+            f"👑 <b>Yangi VIP xarid</b>\n\n"
+            f"👤 <a href='tg://user?id={user_id}'>{user.get('first_name','Foydalanuvchi')}</a>\n"
+            f"🆔 TG ID: <code>{user_id}</code>\n"
+            f"📦 Paket: <b>{body.package}</b>\n"
+            f"💵 Narxi: <b>{body.price:,} so'm</b>"
+        )
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                json={"chat_id": ADMIN_ID, "text": admin_text, "parse_mode": "HTML"}
+            )
+    except Exception:
+        pass
+
+    return {"ok": True, "order_id": order_id}
+
+
 class UcOrderRequest(BaseModel):
     player_id: str
     uc: int
