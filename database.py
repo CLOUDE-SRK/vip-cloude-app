@@ -139,10 +139,25 @@ def get_topup(request_id: int):
     return row
 
 def approve_topup(request_id: int):
+    """Topup so'rovini tasdiqlaydi VA summani foydalanuvchi balansiga
+    qo'shadi. Eski versiyada faqat status o'zgartirilardi, pul esa
+    balansga qo'shilmasdi - shu sababli foydalanuvchi balansi
+    yangilanmagan va tarixda ham summasiz ko'rinardi."""
     conn = get_conn()
+    row = conn.execute(
+        "SELECT user_id, amount, status FROM topup_requests WHERE id=?", (request_id,)
+    ).fetchone()
+    if not row or row["status"] != "pending":
+        conn.close()
+        return False
     conn.execute("UPDATE topup_requests SET status='approved' WHERE id=?", (request_id,))
+    conn.execute(
+        "UPDATE users SET balance = balance + ? WHERE user_id=?",
+        (row["amount"], row["user_id"])
+    )
     conn.commit()
     conn.close()
+    return True
 
 # ── UC Orders ─────────────────────────────────────────────
 def create_uc_order(user_id: int, pubg_id: str, uc_amount: int, price: int, msg_id: int) -> int:
@@ -302,3 +317,4 @@ def set_task_done(user_id: int, task_key: str):
     )
     conn.commit()
     conn.close()
+    
