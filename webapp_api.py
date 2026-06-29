@@ -111,9 +111,7 @@ async def get_balance(request: Request):
 
     # Referrallar soni
     conn = db.get_conn()
-    c = conn.cursor()
-    c.execute("SELECT refs FROM users WHERE user_id=%s", (user_id,))
-    refs = c.fetchone()
+    refs = conn.execute("SELECT refs FROM users WHERE user_id=?", (user_id,)).fetchone()
     conn.close()
     refs_count = refs["refs"] if refs else 0
 
@@ -128,15 +126,13 @@ async def get_balance(request: Request):
 async def get_leaderboard():
     """Top 10 foydalanuvchi referral soniga qarab"""
     conn = db.get_conn()
-    c = conn.cursor()
-    c.execute("""
+    rows = conn.execute("""
         SELECT user_id, first_name, username, refs
         FROM users
         WHERE refs > 0
         ORDER BY refs DESC
         LIMIT 10
-    """)
-    rows = c.fetchall()
+    """).fetchall()
     conn.close()
 
     result = []
