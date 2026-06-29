@@ -12,7 +12,6 @@ def init_db():
     conn = get_conn()
     c = conn.cursor()
 
-    # Foydalanuvchilar
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id     INTEGER PRIMARY KEY,
@@ -25,7 +24,6 @@ def init_db():
         )
     """)
 
-    # Topup so'rovlar (screenshot)
     c.execute("""
         CREATE TABLE IF NOT EXISTS topup_requests (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +36,6 @@ def init_db():
         )
     """)
 
-    # UC buyurtmalar
     c.execute("""
         CREATE TABLE IF NOT EXISTS uc_orders (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,7 +49,6 @@ def init_db():
         )
     """)
 
-    # VIP xaridlar
     c.execute("""
         CREATE TABLE IF NOT EXISTS vip_orders (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +60,6 @@ def init_db():
         )
     """)
 
-    # Vazifalar holati
     c.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             user_id     INTEGER,
@@ -77,7 +72,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ── Foydalanuvchi ──────────────────────────────────────────
 def get_user(user_id: int):
     conn = get_conn()
     user = conn.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
@@ -120,7 +114,6 @@ def deduct_balance(user_id: int, amount: int) -> bool:
     conn.close()
     return True
 
-# ── Topup ──────────────────────────────────────────────────
 def create_topup(user_id: int, amount: int, method: str, msg_id: int) -> int:
     conn = get_conn()
     cur = conn.execute(
@@ -138,11 +131,20 @@ def get_topup(request_id: int):
     conn.close()
     return row
 
-def approve_topup(request_id: int):
+def approve_topup(request_id: int, amount: int = None):
     """Topup so'rovini tasdiqlaydi VA summani foydalanuvchi balansiga
-    qo'shadi. Eski versiyada faqat status o'zgartirilardi, pul esa
-    balansga qo'shilmasdi - shu sababli foydalanuvchi balansi
-    yangilanmagan va tarixda ham summasiz ko'rinardi."""
+    qo'shadi.
+
+    `amount` parametri ixtiyoriy: admin screenshot/raqam orqali summani
+    tasdiqlaganda haqiqiy summa shu yerga keladi va topup_requests
+    jadvalidagi 'amount' ustuni ham shu qiymat bilan yangilanadi
+    (screenshot kelganda amount=0 bilan yaratilgani uchun, buni
+    keyinroq to'g'ri summa bilan to'ldirish kerak).
+
+    MUHIM: balansga pul aynan shu funksiya ichida bir marta qo'shiladi.
+    bot.py tarafida bu funksiyani chaqirgandan keyin yana add_balance()
+    chaqirilmasligi kerak - aks holda pul ikki marta qo'shilib ketadi.
+    """
     conn = get_conn()
     row = conn.execute(
         "SELECT user_id, amount, status FROM topup_requests WHERE id=?", (request_id,)
@@ -150,16 +152,21 @@ def approve_topup(request_id: int):
     if not row or row["status"] != "pending":
         conn.close()
         return False
-    conn.execute("UPDATE topup_requests SET status='approved' WHERE id=?", (request_id,))
+
+    final_amount = amount if amount is not None else row["amount"]
+
+    conn.execute(
+        "UPDATE topup_requests SET status='approved', amount=? WHERE id=?",
+        (final_amount, request_id)
+    )
     conn.execute(
         "UPDATE users SET balance = balance + ? WHERE user_id=?",
-        (row["amount"], row["user_id"])
+        (final_amount, row["user_id"])
     )
     conn.commit()
     conn.close()
     return True
 
-# ── UC Orders ─────────────────────────────────────────────
 def create_uc_order(user_id: int, pubg_id: str, uc_amount: int, price: int, msg_id: int) -> int:
     conn = get_conn()
     cur = conn.execute(
@@ -183,7 +190,6 @@ def approve_uc_order(order_id: int):
     conn.commit()
     conn.close()
 
-# ── ADMIN PANEL uchun qo'shimcha funksiyalar ───────────────
 def get_pending_uc_orders():
     conn = get_conn()
     rows = conn.execute("""
@@ -228,10 +234,6 @@ def cancel_uc_order(order_id: int):
     return {"user_id": row["user_id"], "price": row["price"]}
 
 def get_user_history(user_id: int, limit: int = 100):
-    """Foydalanuvchining barcha tranzaksiyalarini (UC xaridlar, VIP
-    xaridlar, hisob to'ldirishlar) bitta ro'yxatda, vaqt bo'yicha
-    kamayish tartibida qaytaradi. Webapp 'Tranzaksiyalar' bo'limi
-    aynan shu funksiyaga tayanadi."""
     conn = get_conn()
 
     uc_rows = conn.execute(
@@ -290,7 +292,6 @@ def get_user_history(user_id: int, limit: int = 100):
     items.sort(key=lambda x: x["created_at"], reverse=True)
     return items[:limit]
 
-# ── VIP Orders ────────────────────────────────────────────
 def create_vip_order(user_id: int, vip_type: str, price: int) -> int:
     conn = get_conn()
     cur = conn.execute(
@@ -302,7 +303,6 @@ def create_vip_order(user_id: int, vip_type: str, price: int) -> int:
     conn.close()
     return oid
 
-# ── Tasks ─────────────────────────────────────────────────
 def get_task(user_id: int, task_key: str):
     conn = get_conn()
     row = conn.execute("SELECT * FROM tasks WHERE user_id=? AND task_key=?", (user_id, task_key)).fetchone()
