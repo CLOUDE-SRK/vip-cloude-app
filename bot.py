@@ -90,7 +90,6 @@ async def handle_webapp_data(message: types.Message):
         uc_amount = data.get("uc", 0)
         price     = data.get("price", 0)
 
-        # Serverdan haqiqiy balansni tekshiramiz
         real_balance = db.get_balance(user_id)
         logging.info(f"[UC_ORDER] real_balance={real_balance} price={price}")
         if real_balance < price:
@@ -230,14 +229,15 @@ async def admin_confirm(message: types.Message):
         await message.answer("❌ Pending so'rov topilmadi.")
         return
 
-    db.add_balance(row["user_id"], amount)
-    # MUHIM: amount shu yerda ham beriladi, shunda topup_requests jadvalidagi
-    # "amount" ustuni ham yangilanadi (avval 0 bo'lib qolardi, chunki
-    # screenshot kelganda summa hali noma'lum bo'lib create_topup(amount=0)
-    # bilan yaratilgan edi). approve_topup balansga PUL QO'SHMAYDI - buni
-    # yuqoridagi add_balance() qatori bajaradi, shu sababli ikki marta
-    # qo'shilib ketmaydi.
-    db.approve_topup(row["id"], amount)
+    # MUHIM: approve_topup() endi `amount` ham qabul qiladi va balansga
+    # pulni shu funksiya ICHIDA bir marta qo'shadi (topup_requests
+    # jadvalidagi 'amount' ustunini ham yangilab). Bu yerda alohida
+    # db.add_balance() chaqirilmaydi - aks holda pul ikki marta
+    # qo'shilib ketadi.
+    ok = db.approve_topup(row["id"], amount)
+    if not ok:
+        await message.answer("❌ Bu so'rov allaqachon tasdiqlangan yoki topilmadi.")
+        return
 
     new_balance = db.get_balance(row["user_id"])
     await message.answer(
@@ -309,3 +309,4 @@ async def task_no(call: types.CallbackQuery):
 if __name__ == "__main__":
     db.init_db()
     executor.start_polling(dp, skip_updates=True)
+        
