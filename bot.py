@@ -80,6 +80,7 @@ async def handle_webapp_data(message: types.Message):
         )
         sent = await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML")
         db.create_topup(user_id, amount, method, sent.message_id)
+        # Foydalanuvchiga xabar YUBORILMAYDI
 
     # ── UC buyurtma ──
     elif dtype == "uc_purchase_request":
@@ -92,16 +93,16 @@ async def handle_webapp_data(message: types.Message):
         logging.info(f"[UC_ORDER] real_balance={real_balance} price={price}")
         if real_balance < price:
             logging.warning(f"[UC_ORDER] Balans yetarli emas: {real_balance} < {price}")
-            await message.answer(f"❌ Balans yetarli emas.\nBalansingiz: {real_balance:,} so'm\nKerakli summa: {price:,} so'm")
+            # Foydalanuvchiga xabar YUBORILMAYDI
             return
 
         ok = db.deduct_balance(user_id, price)
         logging.info(f"[UC_ORDER] deduct_balance natija: {ok}")
         if not ok:
-            await message.answer("❌ Balans yetarli emas.")
+            # Foydalanuvchiga xabar YUBORILMAYDI
             return
 
-        await message.answer(f"✅ UC buyurtmangiz qabul qilindi!\nAdmin tez orada yuklaydi. 🎮")
+        # Foydalanuvchiga xabar YUBORILMAYDI
 
         kb = InlineKeyboardMarkup()
         kb.add(InlineKeyboardButton("✅ UC Yuklandi", callback_data=f"uc_done:{user_id}:{uc_amount}"))
@@ -130,12 +131,12 @@ async def handle_webapp_data(message: types.Message):
 
         real_balance = db.get_balance(user_id)
         if real_balance < price:
-            await message.answer(f"❌ Balans yetarli emas.\nBalansingiz: {real_balance:,} so'm")
+            # Foydalanuvchiga xabar YUBORILMAYDI
             return
 
         ok = db.deduct_balance(user_id, price)
         if not ok:
-            await message.answer("❌ Balans yetarli emas.")
+            # Foydalanuvchiga xabar YUBORILMAYDI
             return
 
         db.create_vip_order(user_id, vip_type, price)
@@ -152,16 +153,15 @@ async def handle_webapp_data(message: types.Message):
             f"💵 Narxi: <b>{price:,} so'm</b>"
         )
         await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML")
-        await message.answer(f"🎉 <b>{vip_type}</b> VIP faollashtirildi!\nKanalga kirish: @CLOUDE_CHEATS", parse_mode="HTML")
+        # Foydalanuvchiga xabar YUBORILMAYDI
 
     # ── Task verify ──
     elif dtype == "task_verify_request":
         task_key = data.get("task", "")
 
-        # Allaqachon bajarilganmi?
         row = db.get_task(user_id, task_key)
         if row and row["status"] == "done":
-            await message.answer("✅ Bu vazifa allaqachon bajarilgan.")
+            # Foydalanuvchiga xabar YUBORILMAYDI
             return
 
         if task_key == "tg":
@@ -171,12 +171,13 @@ async def handle_webapp_data(message: types.Message):
                     db.set_task_done(user_id, "tg")
                     reward = TASK_REWARDS["tg"]
                     db.add_balance(user_id, reward)
-                    await message.answer(f"✅ A'zolik tasdiqlandi! +{reward:,} so'm qo'shildi. 🎉")
+                    # Foydalanuvchiga xabar YUBORILMAYDI
                 else:
-                    await message.answer("❌ Siz hali @CLOUDE_CHEATS kanalga a'zo emassiz.")
+                    # Foydalanuvchiga xabar YUBORILMAYDI
+                    pass
             except Exception as e:
                 logging.error(f"Task tg check error: {e}")
-                await message.answer("⚠️ Tekshirishda xatolik. Qayta urining.")
+                # Foydalanuvchiga xabar YUBORILMAYDI
         else:
             reward = TASK_REWARDS.get(task_key, 3000)
             kb = InlineKeyboardMarkup()
@@ -193,7 +194,7 @@ async def handle_webapp_data(message: types.Message):
                 f"💰 Mukofot: <b>{reward:,} so'm</b>"
             )
             await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML", reply_markup=kb)
-            await message.answer("⏳ So'rovingiz adminga yuborildi. Tez orada tekshiriladi.")
+            # Foydalanuvchiga xabar YUBORILMAYDI
 
 # ── Screenshot (to'lov) ──────────────────────────────────
 @dp.message_handler(content_types=types.ContentType.PHOTO)
@@ -201,12 +202,8 @@ async def handle_photo(message: types.Message):
     user = message.from_user
     db.ensure_user(user.id, user.username, user.first_name)
 
-    # Admin uchun istisno: admin yuborgan rasmlar bu cheklovga tushmaydi
     if user.id != ADMIN_ID and db.has_screenshot_today(user.id):
-        await message.answer(
-            "❌ Siz bugun allaqachon 1 ta to'lov skrinshoti yubordingiz.\n"
-            "Kuniga faqat 1 marta skrinshot yuborish mumkin. Ertaga qayta urinib ko'ring."
-        )
+        # Foydalanuvchiga xabar YUBORILMAYDI
         return
 
     caption = (
@@ -218,6 +215,7 @@ async def handle_photo(message: types.Message):
     await message.forward(ADMIN_ID)
     sent = await bot.send_message(ADMIN_ID, caption, parse_mode="HTML")
     db.create_topup(user.id, 0, "screenshot", sent.message_id)
+    # Foydalanuvchiga xabar YUBORILMAYDI
 
 # ── Admin: raqam yozsa topup tasdiqlash ─────────────────
 @dp.message_handler(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.strip().isdigit())
@@ -233,11 +231,6 @@ async def admin_confirm(message: types.Message):
         await message.answer("❌ Pending so'rov topilmadi.")
         return
 
-    # MUHIM: approve_topup() endi `amount` ham qabul qiladi va balansga
-    # pulni shu funksiya ICHIDA bir marta qo'shadi (topup_requests
-    # jadvalidagi 'amount' ustunini ham yangilab). Bu yerda alohida
-    # db.add_balance() chaqirilmaydi - aks holda pul ikki marta
-    # qo'shilib ketadi.
     ok = db.approve_topup(row["id"], amount)
     if not ok:
         await message.answer("❌ Bu so'rov allaqachon tasdiqlangan yoki topilmadi.")
@@ -256,6 +249,7 @@ async def uc_done(call: types.CallbackQuery):
         return await call.answer("❌ Ruxsat yo'q")
     await call.message.edit_reply_markup()
     await call.answer("✅ Tasdiqlandi")
+    # Foydalanuvchiga xabar YUBORILMAYDI
 
 # ── Callback: UC bekor qilish ────────────────────────────
 @dp.callback_query_handler(lambda c: c.data.startswith("uc_cancel:"))
@@ -267,7 +261,7 @@ async def uc_cancel(call: types.CallbackQuery):
     price = int(parts[2]) if len(parts) > 2 else 0
     if price > 0:
         db.add_balance(user_id, price)
-    await bot.send_message(user_id, f"❌ UC buyurtmangiz bekor qilindi. {price:,} so'm qaytarildi.")
+    # Foydalanuvchiga xabar YUBORILMAYDI
     await call.message.edit_reply_markup()
     await call.answer("❌ Bekor qilindi")
 
@@ -286,7 +280,7 @@ async def task_ok(call: types.CallbackQuery):
 
     db.set_task_done(user_id, task_key)
     db.add_balance(user_id, reward)
-    await bot.send_message(user_id, f"✅ Vazifa tasdiqlandi! +{reward:,} so'm qo'shildi! 🎉")
+    # Foydalanuvchiga xabar YUBORILMAYDI
     await call.message.edit_reply_markup()
     await call.answer("✅ Tasdiqlandi")
 
@@ -295,7 +289,7 @@ async def task_no(call: types.CallbackQuery):
     if call.from_user.id != ADMIN_ID:
         return await call.answer("❌ Ruxsat yo'q")
     _, user_id, task_key = call.data.split(":")
-    await bot.send_message(int(user_id), "❌ Vazifa tasdiqlanmadi. Qayta urining.")
+    # Foydalanuvchiga xabar YUBORILMAYDI
     await call.message.edit_reply_markup()
     await call.answer("❌ Rad etildi")
 
@@ -303,4 +297,4 @@ async def task_no(call: types.CallbackQuery):
 if __name__ == "__main__":
     db.init_db()
     executor.start_polling(dp, skip_updates=True)
-            
+    
