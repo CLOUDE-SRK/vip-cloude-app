@@ -221,9 +221,11 @@ async def handle_photo(message: types.Message):
 async def admin_confirm(message: types.Message):
     amount = int(message.text.strip())
     conn = db.get_conn()
-    row = conn.execute(
+    c = conn.cursor()
+    c.execute(
         "SELECT * FROM topup_requests WHERE status='pending' ORDER BY id DESC LIMIT 1"
-    ).fetchone()
+    )
+    row = c.fetchone()
     conn.close()
 
     if not row:
