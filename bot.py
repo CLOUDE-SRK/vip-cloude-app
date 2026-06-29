@@ -231,7 +231,13 @@ async def admin_confirm(message: types.Message):
         return
 
     db.add_balance(row["user_id"], amount)
-    db.approve_topup(row["id"])
+    # MUHIM: amount shu yerda ham beriladi, shunda topup_requests jadvalidagi
+    # "amount" ustuni ham yangilanadi (avval 0 bo'lib qolardi, chunki
+    # screenshot kelganda summa hali noma'lum bo'lib create_topup(amount=0)
+    # bilan yaratilgan edi). approve_topup balansga PUL QO'SHMAYDI - buni
+    # yuqoridagi add_balance() qatori bajaradi, shu sababli ikki marta
+    # qo'shilib ketmaydi.
+    db.approve_topup(row["id"], amount)
 
     new_balance = db.get_balance(row["user_id"])
     await message.answer(
