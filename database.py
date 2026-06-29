@@ -131,6 +131,25 @@ def get_topup(request_id: int):
     conn.close()
     return row
 
+def has_screenshot_today(user_id: int) -> bool:
+    """Foydalanuvchi bugun (kalendar kuni, UTC) allaqachon to'lov
+    screenshoti yuborganmi, shuni tekshiradi. Kunlik 1 ta screenshot
+    limitini amalga oshirish uchun ishlatiladi. method='screenshot'
+    bo'lgan yozuvlarni (topup_request orqali kelganlarni emas)
+    hisobga oladi."""
+    conn = get_conn()
+    row = conn.execute(
+        """
+        SELECT 1 FROM topup_requests
+        WHERE user_id=? AND method='screenshot'
+          AND date(created_at, 'unixepoch') = date('now')
+        LIMIT 1
+        """,
+        (user_id,)
+    ).fetchone()
+    conn.close()
+    return row is not None
+
 def approve_topup(request_id: int, amount: int = None):
     """Topup so'rovini tasdiqlaydi VA summani foydalanuvchi balansiga
     qo'shadi.
