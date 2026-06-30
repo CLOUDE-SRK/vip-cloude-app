@@ -123,36 +123,54 @@ async def handle_webapp_data(message: types.Message):
         except Exception as e:
             logging.error(f"[UC_ORDER] Admin ga xabar yuborishda XATO: {e}")
         db.create_uc_order(user_id, pubg_id, uc_amount, price, 0)
+# ── VIP xarid ──
+elif dtype == "vip_purchase":
+    vip_type = data.get("vip_type", "")
+    price    = data.get("price", 0)
 
-    # ── VIP xarid ──
-    elif dtype == "vip_purchase":
-        vip_type = data.get("vip_type", "")
-        price    = data.get("price", 0)
+    real_balance = db.get_balance(user_id)
+    if real_balance < price:
+        return
 
-        real_balance = db.get_balance(user_id)
-        if real_balance < price:
-            # Foydalanuvchiga xabar YUBORILMAYDI
-            return
+    ok = db.deduct_balance(user_id, price)
+    if not ok:
+        return
 
-        ok = db.deduct_balance(user_id, price)
-        if not ok:
-            # Foydalanuvchiga xabar YUBORILMAYDI
-            return
+    db.create_vip_order(user_id, vip_type, price)
+    
+    try:
+        await bot.unban_chat_member(VIP_CHAT_ID, user_id)
+    except Exception:
+        pass
 
-        db.create_vip_order(user_id, vip_type, price)
-        try:
-            await bot.unban_chat_member(VIP_CHAT_ID, user_id)
-        except Exception:
-            pass
-
-        admin_text = (
-            f"👑 <b>VIP Xarid</b>\n\n"
-            f"👤 <a href='tg://user?id={user.id}'>{user.first_name}</a>\n"
-            f"🆔 ID: <code>{user.id}</code>\n"
-            f"📦 Paket: <b>{vip_type}</b>\n"
-            f"💵 Narxi: <b>{price:,} so'm</b>"
+    # ✅ BIR MARTALIK invite link yaratib foydalanuvchiga yuborish
+    try:
+        from datetime import datetime, timedelta
+        expire = datetime.now() + timedelta(days=1)
+        link = await bot.create_chat_invite_link(
+            chat_id=VIP_CHAT_ID,
+            member_limit=1,
+            expire_date=expire
         )
-        await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML")
+        await bot.send_message(
+            user_id,
+            f"✅ <b>{vip_type}</b> faollashtirildi!\n\n"
+            f"👇 VIP kanalga kirish uchun:\n{link.invite_link}\n\n"
+            f"⚠️ Link 1 kun amal qiladi va faqat 1 marta ishlatiladi.",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logging.error(f"[VIP] Invite link yaratishda xato: {e}")
+        await bot.send_message(user_id, "✅ VIP faollashtirildi! Admin siz bilan bog'lanadi.")
+
+    admin_text = (
+        f"👑 <b>VIP Xarid</b>\n\n"
+        f"👤 <a href='tg://user?id={user.id}'>{user.first_name}</a>\n"
+        f"🆔 ID: <code>{user.id}</code>\n"
+        f"📦 Paket: <b>{vip_type}</b>\n"
+        f"💵 Narxi: <b>{price:,} so'm</b>"
+    )
+    await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML")
         # Foydalanuvchiga xabar YUBORILMAYDI
 
     # ── Task verify ──
