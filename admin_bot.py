@@ -24,7 +24,7 @@ async def admin_cmd_start(message: types.Message):
 
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton(
-        text="🛠 Admin panelni ochish",
+        text="Admin panelni ochish",
         web_app=WebAppInfo(url=ADMIN_WEBAPP_URL)
     ))
     await message.answer("VIP CLOUDE — Admin panel", reply_markup=kb)
