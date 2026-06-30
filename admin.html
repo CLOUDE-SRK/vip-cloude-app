@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VIP CLOUDE — Admin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:#0A0E16;
+    --panel:#121826;
+    --panel-2:#161E30;
+    --line: rgba(255,255,255,0.08);
+    --cyan:#00E5FF;
+    --gold:#FFC94A;
+    --red:#FF3B5C;
+    --ok:#3EE08A;
+    --text:#EAF0F8;
+    --text-dim:#7E8AA0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system, Roboto, Arial, sans-serif;
+    padding-bottom:40px;
+  }
+  header{
+    padding:14px 14px 0 14px;
+  }
+  h1{ font-size:18px; margin-bottom:4px; }
+  .subtitle{ color:var(--text-dim); font-size:13px; margin-bottom:14px; }
+
+  /* Top tab bar — horizontally scrollable */
+  .topbar{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding:0 14px 10px 14px;
+    border-bottom:1px solid var(--line);
+    background:var(--bg);
+    position:sticky;
+    top:0;
+    z-index:10;
+    scrollbar-width:none;
+  }
+  .topbar::-webkit-scrollbar{ display:none; }
+  .topbtn{
+    flex:0 0 auto;
+    white-space:nowrap;
+    padding:9px 14px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-dim);
+    cursor:pointer;
+  }
+  .topbtn.active{
+    background:var(--cyan);
+    color:#001018;
+    border-color:var(--cyan);
+  }
+  .badge{
+    display:inline-block;
+    min-width:16px;
+    padding:1px 5px;
+    margin-left:6px;
+    background:var(--red);
+    color:#fff;
+    border-radius:8px;
+    font-size:10px;
+    font-weight:700;
+  }
+  .topbtn.active .badge{ background:#001018; color:var(--gold); }
+
+  .page{ padding:14px; display:none; }
+  .page.active{ display:block; }
+
+  .refresh-btn{
+    width:100%;
+    padding:10px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    font-size:13px;
+    margin-bottom:14px;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:12px;
+  }
+  .row{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    padding:4px 0;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .row:last-of-type{ border-bottom:none; }
+  .row .label{ color:var(--text-dim); }
+  .row .value{ font-weight:600; text-align:right; }
+
+  .top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:10px;
+  }
+  .id-tag{ font-size:11px; color:var(--text-dim); }
+  .status-pill{
+    font-size:11px;
+    font-weight:700;
+    padding:3px 8px;
+    border-radius:6px;
+  }
+  .status-pending{ background:rgba(255,201,74,0.16); color:var(--gold); }
+  .status-approved{ background:rgba(62,224,138,0.16); color:var(--ok); }
+  .status-cancelled, .status-rejected{ background:rgba(255,59,92,0.16); color:var(--red); }
+
+  .actions{ display:flex; gap:8px; margin-top:12px; }
+  .btn{
+    flex:1;
+    padding:11px 0;
+    border-radius:10px;
+    border:none;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-approve{ background:var(--ok); color:#04200F; }
+  .btn-cancel{ background:var(--red); color:#2A0610; }
+  .btn-gold{ background:var(--gold); color:#2A1B00; }
+  .btn-cyan{ background:var(--cyan); color:#001018; }
+  .btn:disabled{ opacity:0.5; }
+
+  .empty-state{ text-align:center; padding:40px 0; color:var(--text-dim); font-size:14px; }
+  .denied{ text-align:center; padding:60px 20px; color:var(--text-dim); }
+
+  .toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    padding:12px 18px;
+    border-radius:10px;
+    font-size:13px;
+    max-width:90%;
+    text-align:center;
+    z-index:100;
+    display:none;
+  }
+
+  /* forms */
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; }
+  .field input, .field select{
+    width:100%;
+    padding:11px 12px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    font-size:14px;
+  }
+  .rank{
+    width:28px; height:28px;
+    border-radius:50%;
+    background:var(--panel-2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700;
+    color:var(--gold);
+    flex:0 0 auto;
+  }
+  .player-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .player-row:last-of-type{ border-bottom:none; }
+  .player-name{ font-size:14px; font-weight:600; flex:1; }
+  .player-name .uid{ display:block; font-size:11px; color:var(--text-dim); font-weight:400; }
+  .player-refs{ font-size:13px; font-weight:700; color:var(--cyan); }
+
+  .premium-tag{
+    display:inline-block;
+    margin-top:6px;
+    font-size:11px;
+    font-weight:700;
+    padding:3px 8px;
+    border-radius:6px;
+    background:rgba(255,201,74,0.16);
+    color:var(--gold);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛠 VIP CLOUDE — Admin panel</h1>
+  <div class="subtitle">Boshqaruv paneli</div>
+</header>
+
+<div class="topbar">
+  <div class="topbtn active" data-tab="orders" onclick="switchTab('orders')">📦 Buyurtmalar</div>
+  <div class="topbtn" data-tab="verify" onclick="switchTab('verify')">📋 Referal so'rovlari</div>
+  <div class="topbtn" data-tab="tasks" onclick="switchTab('tasks')">✅ Vazifalar</div>
+  <div class="topbtn" data-tab="top" onclick="switchTab('top')">🏆 Top o'yinchilar</div>
+  <div class="topbtn" data-tab="profile" onclick="switchTab('profile')">👤 Profil</div>
+</div>
+
+<!-- 1. BUYURTMALAR -->
+<div class="page active" id="page-orders">
+  <div class="topbar" style="border:none;padding:10px 0;">
+    <div class="topbtn active" id="ord-pending" onclick="setOrdersFilter('pending')">Kutilayotgan</div>
+    <div class="topbtn" id="ord-all" onclick="setOrdersFilter('all')">Hammasi</div>
+  </div>
+  <button class="refresh-btn" onclick="loadOrders()">🔄 Yangilash</button>
+  <div id="ordersList"></div>
+</div>
+
+<!-- 2. REFERAL SO'ROVLARI -->
+<div class="page" id="page-verify">
+  <button class="refresh-btn" onclick="loadVerifyRequests()">🔄 Yangilash</button>
+  <div id="verifyList"></div>
+</div>
+
+<!-- 3. VAZIFALAR -->
+<div class="page" id="page-tasks">
+  <div class="card">
+    <div class="field">
+      <label>Vazifa nomi</label>
+      <input type="text" id="newTaskTitle" placeholder="Masalan: Yangi TG kanalga obuna bo'lish">
+    </div>
+    <div class="field">
+      <label>Mukofot (so'm)</label>
+      <input type="number" id="newTaskReward" placeholder="1000">
+    </div>
+    <button class="btn btn-cyan" style="width:100%;" onclick="createCustomTask()">➕ Vazifa qo'shish</button>
+  </div>
+  <button class="refresh-btn" onclick="loadCustomTasks()">🔄 Yangilash</button>
+  <div id="tasksList"></div>
+</div>
+
+<!-- 4. TOP O'YINCHILAR -->
+<div class="page" id="page-top">
+  <button class="refresh-btn" onclick="loadTopPlayers()">🔄 Yangilash</button>
+  <div class="card" id="topPlayersCard">
+    <div id="topPlayersList"></div>
+  </div>
+  <button class="btn btn-cancel" style="width:100%;" onclick="resetCompetition()">🏁 Raqobatni tugatish</button>
+</div>
+
+<!-- 5. PROFIL -->
+<div class="page" id="page-profile">
+  <div class="card">
+    <div class="field">
+      <label>🔍 Foydalanuvchi TG ID</label>
+      <input type="number" id="profileSearchId" placeholder="123456789">
+    </div>
+    <button class="btn btn-cyan" style="width:100%;" onclick="searchProfile()">Qidirish</button>
+  </div>
+  <div id="profileResult"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if(tg){ tg.ready(); tg.expand(); }
+
+const API_URL = 'https://vip-cloude-app.onrender.com';
+let currentOrdersFilter = 'pending';
+
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
+
+function authHeaders(){
+  return { 'X-Init-Data': tg?.initData || '' };
+}
+
+function formatDate(ts){
+  const d = new Date(ts * 1000);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const min = String(d.getMinutes()).padStart(2,'0');
+  return `${dd}.${mm} ${hh}:${min}`;
+}
+
+function num(n){ return Number(n||0).toLocaleString('ru-RU'); }
+
+function switchTab(tab){
+  document.querySelectorAll('.topbar > .topbtn').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById(`page-${tab}`).classList.add('active');
+
+  if(tab === 'orders') loadOrders();
+  if(tab === 'verify') loadVerifyRequests();
+  if(tab === 'tasks') loadCustomTasks();
+  if(tab === 'top') loadTopPlayers();
+}
+
+/* ============ 1. BUYURTMALAR ============ */
+function setOrdersFilter(f){
+  currentOrdersFilter = f;
+  document.getElementById('ord-pending').classList.toggle('active', f === 'pending');
+  document.getElementById('ord-all').classList.toggle('active', f === 'all');
+  loadOrders();
+}
+
+function statusLabel(status){
+  if(status === 'pending') return ['Kutilmoqda', 'status-pending'];
+  if(status === 'approved') return ['Tasdiqlangan', 'status-approved'];
+  if(status === 'cancelled') return ['Bekor qilingan', 'status-cancelled'];
+  if(status === 'rejected') return ['Rad etilgan', 'status-rejected'];
+  return [status, ''];
+}
+
+async function loadOrders(){
+  const listEl = document.getElementById('ordersList');
+  listEl.innerHTML = '<div class="empty-state">⏳ Yuklanmoqda...</div>';
+  try {
+    const res = await fetch(`${API_URL}/admin/orders?status=${currentOrdersFilter}`, { headers: authHeaders() });
+    if(res.status === 403){ listEl.innerHTML = '<div class="denied">🚫 Sizga ruxsat yo\'q.</div>'; return; }
+    if(!res.ok){ listEl.innerHTML = '<div class="empty-state">⚠ Server xatosi.</div>'; return; }
+    const orders = await res.json();
+    if(!orders.length){ listEl.innerHTML = '<div class="empty-state">📭 Buyurtmalar yo\'q</div>'; return; }
+
+    listEl.innerHTML = orders.map(o => {
+      const [label, cls] = statusLabel(o.status);
+      const actions = o.status === 'pending' ? `
+        <div class="actions">
+          <button class="btn btn-approve" onclick="approveOrder(${o.id})">✅ Tasdiqlash</button>
+          <button class="btn btn-cancel" onclick="cancelOrder(${o.id})">❌ Bekor qilish</button>
+        </div>` : '';
+      return `
+        <div class="card" id="order-${o.id}">
+          <div class="top">
+            <span class="id-tag">Buyurtma #${o.id} · ${formatDate(o.created_at)}</span>
+            <span class="status-pill ${cls}">${label}</span>
+          </div>
+          <div class="row"><span class="label">Foydalanuvchi</span><span class="value">${o.name}</span></div>
+          <div class="row"><span class="label">TG ID</span><span class="value">${o.user_id}</span></div>
+          <div class="row"><span class="label">PUBG ID</span><span class="value">${o.pubg_id}</span></div>
+          <div class="row"><span class="label">UC</span><span class="value">${num(o.uc_amount)} UC</span></div>
+          <div class="row"><span class="label">Narxi</span><span class="value">${num(o.price)} so'm</span></div>
+          ${actions}
+        </div>`;
+    }).join('');
+  } catch(e){ listEl.innerHTML = '<div class="empty-state">⚠ Aloqa yo\'q.</div>'; }
+}
+
+async function approveOrder(orderId){
+  const card = document.getElementById(`order-${orderId}`);
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const res = await fetch(`${API_URL}/admin/orders/${orderId}/approve`, { method:'POST', headers: authHeaders() });
+    if(!res.ok){ showToast('❌ Xatolik'); card.querySelectorAll('button').forEach(b=>b.disabled=false); return; }
+    tg?.HapticFeedback?.notificationOccurred('success');
+    showToast('✅ Tasdiqlandi');
+    loadOrders();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); card.querySelectorAll('button').forEach(b=>b.disabled=false); }
+}
+
+async function cancelOrder(orderId){
+  const card = document.getElementById(`order-${orderId}`);
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const res = await fetch(`${API_URL}/admin/orders/${orderId}/cancel`, { method:'POST', headers: authHeaders() });
+    if(!res.ok){ showToast('❌ Xatolik'); card.querySelectorAll('button').forEach(b=>b.disabled=false); return; }
+    tg?.HapticFeedback?.notificationOccurred('success');
+    showToast('✅ Bekor qilindi, pul qaytarildi');
+    loadOrders();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); card.querySelectorAll('button').forEach(b=>b.disabled=false); }
+}
+
+/* ============ 2. REFERAL SO'ROVLARI ============ */
+async function loadVerifyRequests(){
+  const listEl = document.getElementById('verifyList');
+  listEl.innerHTML = '<div class="empty-state">⏳ Yuklanmoqda...</div>';
+  try {
+    const res = await fetch(`${API_URL}/admin/verify_requests?status=pending`, { headers: authHeaders() });
+    if(res.status === 403){ listEl.innerHTML = '<div class="denied">🚫 Sizga ruxsat yo\'q.</div>'; return; }
+    if(!res.ok){ listEl.innerHTML = '<div class="empty-state">⚠ Server xatosi.</div>'; return; }
+    const reqs = await res.json();
+    if(!reqs.length){ listEl.innerHTML = '<div class="empty-state">📭 So\'rovlar yo\'q</div>'; return; }
+
+    listEl.innerHTML = reqs.map(r => `
+      <div class="card" id="verify-${r.id}">
+        <div class="top">
+          <span class="id-tag">So'rov #${r.id} · ${formatDate(r.created_at)}</span>
+          <span class="status-pill status-pending">Kutilmoqda</span>
+        </div>
+        <div class="row"><span class="label">Foydalanuvchi</span><span class="value">${r.name}</span></div>
+        <div class="row"><span class="label">TG ID</span><span class="value">${r.user_id}</span></div>
+        <div class="row"><span class="label">Vazifa</span><span class="value">${r.task_title}</span></div>
+        <div class="row"><span class="label">Mukofot</span><span class="value">${num(r.reward)} so'm</span></div>
+        <div class="actions">
+          <button class="btn btn-approve" onclick="approveVerify(${r.id})">✅ Tasdiqlash</button>
+          <button class="btn btn-cancel" onclick="rejectVerify(${r.id})">❌ Bekor qilish</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e){ listEl.innerHTML = '<div class="empty-state">⚠ Aloqa yo\'q.</div>'; }
+}
+
+async function approveVerify(id){
+  const card = document.getElementById(`verify-${id}`);
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const res = await fetch(`${API_URL}/admin/verify_requests/${id}/approve`, { method:'POST', headers: authHeaders() });
+    if(!res.ok){ showToast('❌ Xatolik'); card.querySelectorAll('button').forEach(b=>b.disabled=false); return; }
+    showToast('✅ Tasdiqlandi, mukofot berildi');
+    loadVerifyRequests();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); card.querySelectorAll('button').forEach(b=>b.disabled=false); }
+}
+
+async function rejectVerify(id){
+  const card = document.getElementById(`verify-${id}`);
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const res = await fetch(`${API_URL}/admin/verify_requests/${id}/reject`, { method:'POST', headers: authHeaders() });
+    if(!res.ok){ showToast('❌ Xatolik'); card.querySelectorAll('button').forEach(b=>b.disabled=false); return; }
+    showToast('✅ Bekor qilindi');
+    loadVerifyRequests();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); card.querySelectorAll('button').forEach(b=>b.disabled=false); }
+}
+
+/* ============ 3. VAZIFALAR ============ */
+async function loadCustomTasks(){
+  const listEl = document.getElementById('tasksList');
+  listEl.innerHTML = '<div class="empty-state">⏳ Yuklanmoqda...</div>';
+  try {
+    const res = await fetch(`${API_URL}/admin/custom_tasks`, { headers: authHeaders() });
+    if(res.status === 403){ listEl.innerHTML = '<div class="denied">🚫 Sizga ruxsat yo\'q.</div>'; return; }
+    if(!res.ok){ listEl.innerHTML = '<div class="empty-state">⚠ Server xatosi.</div>'; return; }
+    const tasks = await res.json();
+    if(!tasks.length){ listEl.innerHTML = '<div class="empty-state">📭 Vazifalar yo\'q</div>'; return; }
+
+    listEl.innerHTML = tasks.map(t => `
+      <div class="card" id="task-${t.id}">
+        <div class="top">
+          <span class="id-tag">Vazifa #${t.id}</span>
+          <span class="status-pill ${t.active ? 'status-approved' : 'status-cancelled'}">${t.active ? 'Faol' : "O'chirilgan"}</span>
+        </div>
+        <div class="row"><span class="label">Nomi</span><span class="value">${t.title}</span></div>
+        <div class="row"><span class="label">Mukofot</span><span class="value">${num(t.reward)} so'm</span></div>
+        ${t.active ? `<div class="actions"><button class="btn btn-cancel" onclick="deactivateTask(${t.id})">🗑 O'chirish</button></div>` : ''}
+      </div>
+    `).join('');
+  } catch(e){ listEl.innerHTML = '<div class="empty-state">⚠ Aloqa yo\'q.</div>'; }
+}
+
+async function createCustomTask(){
+  const title = document.getElementById('newTaskTitle').value.trim();
+  const reward = parseInt(document.getElementById('newTaskReward').value, 10);
+  if(!title || !reward){ showToast('⚠ Nom va mukofotni kiriting'); return; }
+  try {
+    const res = await fetch(`${API_URL}/admin/custom_tasks`, {
+      method:'POST', headers: { ...authHeaders(), 'Content-Type':'application/json' },
+      body: JSON.stringify({ title, reward })
+    });
+    if(!res.ok){ showToast('❌ Xatolik'); return; }
+    document.getElementById('newTaskTitle').value = '';
+    document.getElementById('newTaskReward').value = '';
+    showToast('✅ Vazifa qo\'shildi');
+    loadCustomTasks();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); }
+}
+
+async function deactivateTask(id){
+  try {
+    const res = await fetch(`${API_URL}/admin/custom_tasks/${id}/deactivate`, { method:'POST', headers: authHeaders() });
+    if(!res.ok){ showToast('❌ Xatolik'); return; }
+    showToast('✅ O\'chirildi');
+    loadCustomTasks();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); }
+}
+
+/* ============ 4. TOP O'YINCHILAR ============ */
+async function loadTopPlayers(){
+  const listEl = document.getElementById('topPlayersList');
+  listEl.innerHTML = '<div class="empty-state">⏳ Yuklanmoqda...</div>';
+  try {
+    const res = await fetch(`${API_URL}/admin/top_players`, { headers: authHeaders() });
+    if(res.status === 403){ listEl.innerHTML = '<div class="denied">🚫 Sizga ruxsat yo\'q.</div>'; return; }
+    if(!res.ok){ listEl.innerHTML = '<div class="empty-state">⚠ Server xatosi.</div>'; return; }
+    const players = await res.json();
+    if(!players.length){ listEl.innerHTML = '<div class="empty-state">📭 Hozircha o\'yinchilar yo\'q</div>'; return; }
+
+    listEl.innerHTML = players.map((p, i) => `
+      <div class="player-row">
+        <div class="rank">${i+1}</div>
+        <div class="player-name">${p.name}<span class="uid">ID: ${p.user_id}</span></div>
+        <div class="player-refs">${p.refs} ta</div>
+      </div>
+    `).join('');
+  } catch(e){ listEl.innerHTML = '<div class="empty-state">⚠ Aloqa yo\'q.</div>'; }
+}
+
+async function resetCompetition(){
+  if(!confirm("Haqiqatan ham raqobatni tugatib, barcha foydalanuvchilarning referal sonini 0 ga qaytarmoqchimisiz?")) return;
+  try {
+    const res = await fetch(`${API_URL}/admin/reset_competition`, { method:'POST', headers: authHeaders() });
+    if(!res.ok){ showToast('❌ Xatolik'); return; }
+    showToast('✅ Yangi raqobat boshlandi');
+    loadTopPlayers();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); }
+}
+
+/* ============ 5. PROFIL ============ */
+async function searchProfile(){
+  const idVal = document.getElementById('profileSearchId').value.trim();
+  const resultEl = document.getElementById('profileResult');
+  if(!idVal){ showToast('⚠ TG ID kiriting'); return; }
+  resultEl.innerHTML = '<div class="empty-state">⏳ Qidirilmoqda...</div>';
+  try {
+    const res = await fetch(`${API_URL}/admin/profile/${idVal}`, { headers: authHeaders() });
+    if(res.status === 403){ resultEl.innerHTML = '<div class="denied">🚫 Sizga ruxsat yo\'q.</div>'; return; }
+    if(res.status === 404){ resultEl.innerHTML = '<div class="empty-state">😕 Foydalanuvchi topilmadi</div>'; return; }
+    if(!res.ok){ resultEl.innerHTML = '<div class="empty-state">⚠ Server xatosi.</div>'; return; }
+    const p = await res.json();
+    renderProfile(p);
+  } catch(e){ resultEl.innerHTML = '<div class="empty-state">⚠ Aloqa yo\'q.</div>'; }
+}
+
+function renderProfile(p){
+  const resultEl = document.getElementById('profileResult');
+  const premiumUntilStr = p.premium_until ? formatDate(p.premium_until) : '—';
+  resultEl.innerHTML = `
+    <div class="card">
+      <div class="top">
+        <span class="id-tag">TG ID: ${p.user_id}</span>
+        ${p.is_premium ? '<span class="status-pill status-approved">💎 Premium</span>' : ''}
+      </div>
+      <div class="row"><span class="label">Ism</span><span class="value">${p.name}</span></div>
+      <div class="row"><span class="label">Username</span><span class="value">${p.username ? '@'+p.username : '—'}</span></div>
+      <div class="row"><span class="label">Balans</span><span class="value">${num(p.balance)} so'm</span></div>
+      <div class="row"><span class="label">Referallar</span><span class="value">${p.refs}</span></div>
+      <div class="row"><span class="label">Premium tugash</span><span class="value">${premiumUntilStr}</span></div>
+      ${p.is_premium ? '<div class="premium-tag">✨ Profilga rasm qo\'yish + pul ishlashda 2x</div>' : ''}
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label>💰 Balansga pul qo'shish (so'm)</label>
+        <input type="number" id="addBalanceAmount" placeholder="10000">
+      </div>
+      <button class="btn btn-cyan" style="width:100%;" onclick="addBalance(${p.user_id})">Qo'shish</button>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label>🎁 Premium sovg'a qilish</label>
+        <select id="premiumDuration">
+          <option value="15kun">15 kunlik</option>
+          <option value="1oy">1 oylik</option>
+          <option value="1sezon">1 sezonlik (90 kun)</option>
+        </select>
+      </div>
+      <button class="btn btn-gold" style="width:100%;" onclick="giftPremium(${p.user_id})">Sovg'a qilish</button>
+    </div>
+  `;
+}
+
+async function addBalance(userId){
+  const amount = parseInt(document.getElementById('addBalanceAmount').value, 10);
+  if(!amount){ showToast('⚠ Summani kiriting'); return; }
+  try {
+    const res = await fetch(`${API_URL}/admin/profile/${userId}/add_balance`, {
+      method:'POST', headers: { ...authHeaders(), 'Content-Type':'application/json' },
+      body: JSON.stringify({ amount })
+    });
+    if(!res.ok){ showToast('❌ Xatolik'); return; }
+    showToast('✅ Balansga qo\'shildi');
+    searchProfile();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); }
+}
+
+async function giftPremium(userId){
+  const duration = document.getElementById('premiumDuration').value;
+  try {
+    const res = await fetch(`${API_URL}/admin/profile/${userId}/gift_premium`, {
+      method:'POST', headers: { ...authHeaders(), 'Content-Type':'application/json' },
+      body: JSON.stringify({ duration })
+    });
+    if(!res.ok){ showToast('❌ Xatolik'); return; }
+    showToast('✅ Premium sovg\'a qilindi');
+    searchProfile();
+  } catch(e){ showToast('⚠ Aloqa xatosi'); }
+}
+
+/* init */
+loadOrders();
+</script>
+</body>
+</html>
