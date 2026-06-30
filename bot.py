@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import json
+from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
@@ -50,6 +51,7 @@ async def cmd_start(message: types.Message):
     ))
     await message.answer("CLOUDE VIP PREMIUM 💎", reply_markup=kb)
 
+
 # ── Webapp sendData ──────────────────────────────────────
 @dp.message_handler(content_types=types.ContentType.WEB_APP_DATA)
 async def handle_webapp_data(message: types.Message):
@@ -80,7 +82,6 @@ async def handle_webapp_data(message: types.Message):
         )
         sent = await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML")
         db.create_topup(user_id, amount, method, sent.message_id)
-        # Foydalanuvchiga xabar YUBORILMAYDI
 
     # ── UC buyurtma ──
     elif dtype == "uc_purchase_request":
@@ -93,16 +94,12 @@ async def handle_webapp_data(message: types.Message):
         logging.info(f"[UC_ORDER] real_balance={real_balance} price={price}")
         if real_balance < price:
             logging.warning(f"[UC_ORDER] Balans yetarli emas: {real_balance} < {price}")
-            # Foydalanuvchiga xabar YUBORILMAYDI
             return
 
         ok = db.deduct_balance(user_id, price)
         logging.info(f"[UC_ORDER] deduct_balance natija: {ok}")
         if not ok:
-            # Foydalanuvchiga xabar YUBORILMAYDI
             return
-
-        # Foydalanuvchiga xabar YUBORILMAYDI
 
         kb = InlineKeyboardMarkup()
         kb.add(InlineKeyboardButton("✅ UC Yuklandi", callback_data=f"uc_done:{user_id}:{uc_amount}"))
@@ -123,55 +120,56 @@ async def handle_webapp_data(message: types.Message):
         except Exception as e:
             logging.error(f"[UC_ORDER] Admin ga xabar yuborishda XATO: {e}")
         db.create_uc_order(user_id, pubg_id, uc_amount, price, 0)
-# ── VIP xarid ──
-elif dtype == "vip_purchase":
-    vip_type = data.get("vip_type", "")
-    price    = data.get("price", 0)
 
-    real_balance = db.get_balance(user_id)
-    if real_balance < price:
-        return
+    # ── VIP xarid ──
+    elif dtype == "vip_purchase":
+        vip_type = data.get("vip_type", "")
+        price    = data.get("price", 0)
 
-    ok = db.deduct_balance(user_id, price)
-    if not ok:
-        return
+        real_balance = db.get_balance(user_id)
+        if real_balance < price:
+            return
 
-    db.create_vip_order(user_id, vip_type, price)
-    
-    try:
-        await bot.unban_chat_member(VIP_CHAT_ID, user_id)
-    except Exception:
-        pass
+        ok = db.deduct_balance(user_id, price)
+        if not ok:
+            return
 
-    # ✅ BIR MARTALIK invite link yaratib foydalanuvchiga yuborish
-    try:
-        from datetime import datetime, timedelta
-        expire = datetime.now() + timedelta(days=1)
-        link = await bot.create_chat_invite_link(
-            chat_id=VIP_CHAT_ID,
-            member_limit=1,
-            expire_date=expire
+        db.create_vip_order(user_id, vip_type, price)
+
+        # Avval ban olib tashlaymiz (agar ban bo'lsa)
+        try:
+            await bot.unban_chat_member(VIP_CHAT_ID, user_id)
+        except Exception:
+            pass
+
+        # Bir martalik invite link yaratib foydalanuvchiga yuboramiz
+        try:
+            expire = datetime.now() + timedelta(days=1)
+            link = await bot.create_chat_invite_link(
+                chat_id=VIP_CHAT_ID,
+                member_limit=1,
+                expire_date=expire
+            )
+            await bot.send_message(
+                user_id,
+                f"✅ <b>{vip_type}</b> faollashtirildi!\n\n"
+                f"👇 VIP kanalga kirish uchun tugmani bosing:",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup().add(
+                    InlineKeyboardButton("💎 VIP Kanalga kirish", url=link.invite_link)
+                )
+            )
+        except Exception as e:
+            logging.error(f"[VIP] Invite link yaratishda xato: {e}")
+
+        admin_text = (
+            f"👑 <b>VIP Xarid</b>\n\n"
+            f"👤 <a href='tg://user?id={user.id}'>{user.first_name}</a>\n"
+            f"🆔 ID: <code>{user.id}</code>\n"
+            f"📦 Paket: <b>{vip_type}</b>\n"
+            f"💵 Narxi: <b>{price:,} so'm</b>"
         )
-        await bot.send_message(
-            user_id,
-            f"✅ <b>{vip_type}</b> faollashtirildi!\n\n"
-            f"👇 VIP kanalga kirish uchun:\n{link.invite_link}\n\n"
-            f"⚠️ Link 1 kun amal qiladi va faqat 1 marta ishlatiladi.",
-            parse_mode="HTML"
-        )
-    except Exception as e:
-        logging.error(f"[VIP] Invite link yaratishda xato: {e}")
-        await bot.send_message(user_id, "✅ VIP faollashtirildi! Admin siz bilan bog'lanadi.")
-
-    admin_text = (
-        f"👑 <b>VIP Xarid</b>\n\n"
-        f"👤 <a href='tg://user?id={user.id}'>{user.first_name}</a>\n"
-        f"🆔 ID: <code>{user.id}</code>\n"
-        f"📦 Paket: <b>{vip_type}</b>\n"
-        f"💵 Narxi: <b>{price:,} so'm</b>"
-    )
-    await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML")
-        # Foydalanuvchiga xabar YUBORILMAYDI
+        await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML")
 
     # ── Task verify ──
     elif dtype == "task_verify_request":
@@ -179,7 +177,6 @@ elif dtype == "vip_purchase":
 
         row = db.get_task(user_id, task_key)
         if row and row["status"] == "done":
-            # Foydalanuvchiga xabar YUBORILMAYDI
             return
 
         if task_key == "tg":
@@ -189,13 +186,10 @@ elif dtype == "vip_purchase":
                     db.set_task_done(user_id, "tg")
                     reward = TASK_REWARDS["tg"]
                     db.add_balance(user_id, reward)
-                    # Foydalanuvchiga xabar YUBORILMAYDI
                 else:
-                    # Foydalanuvchiga xabar YUBORILMAYDI
                     pass
             except Exception as e:
                 logging.error(f"Task tg check error: {e}")
-                # Foydalanuvchiga xabar YUBORILMAYDI
         else:
             reward = TASK_REWARDS.get(task_key, 3000)
             kb = InlineKeyboardMarkup()
@@ -212,7 +206,7 @@ elif dtype == "vip_purchase":
                 f"💰 Mukofot: <b>{reward:,} so'm</b>"
             )
             await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML", reply_markup=kb)
-            # Foydalanuvchiga xabar YUBORILMAYDI
+
 
 # ── Screenshot (to'lov) ──────────────────────────────────
 @dp.message_handler(content_types=types.ContentType.PHOTO)
@@ -221,7 +215,6 @@ async def handle_photo(message: types.Message):
     db.ensure_user(user.id, user.username, user.first_name)
 
     if user.id != ADMIN_ID and db.has_screenshot_today(user.id):
-        # Foydalanuvchiga xabar YUBORILMAYDI
         return
 
     caption = (
@@ -233,7 +226,7 @@ async def handle_photo(message: types.Message):
     await message.forward(ADMIN_ID)
     sent = await bot.send_message(ADMIN_ID, caption, parse_mode="HTML")
     db.create_topup(user.id, 0, "screenshot", sent.message_id)
-    # Foydalanuvchiga xabar YUBORILMAYDI
+
 
 # ── Admin: raqam yozsa topup tasdiqlash ─────────────────
 @dp.message_handler(lambda m: m.from_user.id == ADMIN_ID and m.text and m.text.strip().isdigit())
@@ -260,6 +253,7 @@ async def admin_confirm(message: types.Message):
         f"💰 Yangi balans: {new_balance:,} so'm"
     )
 
+
 # ── Callback: UC tasdiqlash ──────────────────────────────
 @dp.callback_query_handler(lambda c: c.data.startswith("uc_done:"))
 async def uc_done(call: types.CallbackQuery):
@@ -267,7 +261,7 @@ async def uc_done(call: types.CallbackQuery):
         return await call.answer("❌ Ruxsat yo'q")
     await call.message.edit_reply_markup()
     await call.answer("✅ Tasdiqlandi")
-    # Foydalanuvchiga xabar YUBORILMAYDI
+
 
 # ── Callback: UC bekor qilish ────────────────────────────
 @dp.callback_query_handler(lambda c: c.data.startswith("uc_cancel:"))
@@ -279,9 +273,9 @@ async def uc_cancel(call: types.CallbackQuery):
     price = int(parts[2]) if len(parts) > 2 else 0
     if price > 0:
         db.add_balance(user_id, price)
-    # Foydalanuvchiga xabar YUBORILMAYDI
     await call.message.edit_reply_markup()
     await call.answer("❌ Bekor qilindi")
+
 
 # ── Callback: Task tasdiqlash ────────────────────────────
 @dp.callback_query_handler(lambda c: c.data.startswith("task_ok:"))
@@ -298,20 +292,20 @@ async def task_ok(call: types.CallbackQuery):
 
     db.set_task_done(user_id, task_key)
     db.add_balance(user_id, reward)
-    # Foydalanuvchiga xabar YUBORILMAYDI
     await call.message.edit_reply_markup()
     await call.answer("✅ Tasdiqlandi")
+
 
 @dp.callback_query_handler(lambda c: c.data.startswith("task_no:"))
 async def task_no(call: types.CallbackQuery):
     if call.from_user.id != ADMIN_ID:
         return await call.answer("❌ Ruxsat yo'q")
-    _, user_id, task_key = call.data.split(":")
-    # Foydalanuvchiga xabar YUBORILMAYDI
     await call.message.edit_reply_markup()
     await call.answer("❌ Rad etildi")
+
 
 # ── Start ────────────────────────────────────────────────
 if __name__ == "__main__":
     db.init_db()
     executor.start_polling(dp, skip_updates=True)
+    
