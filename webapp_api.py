@@ -20,6 +20,7 @@ app = FastAPI()
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = int(os.environ["ADMIN_ID"])
+VIP_CHAT_ID = int(os.environ["VIP_CHAT_ID"])
 
 ADMIN_BOT_TOKEN = os.environ.get("ADMIN_BOT_TOKEN", "")
 
@@ -169,6 +170,53 @@ async def buy_vip(request: Request, body: VipOrderRequest):
 
     order_id = db.create_vip_order(user_id, body.package, body.price)
 
+    # ✅ VIP kanalga bir martalik invite link yaratib foydalanuvchiga yuboramiz.
+    # Bu eng ishonchli yo'l, chunki Telegram bot oddiy foydalanuvchini
+    # to'g'ridan-to'g'ri kanalga qo'sha olmaydi — faqat invite link orqali.
+    try:
+        import httpx
+        from datetime import datetime, timedelta, timezone
+
+        expire_ts = int((datetime.now(timezone.utc) + timedelta(days=1)).timestamp())
+
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # Avval ban bo'lsa olib tashlaymiz (xato bo'lsa e'tiborsiz qoldiramiz)
+            await client.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/unbanChatMember",
+                json={"chat_id": VIP_CHAT_ID, "user_id": user_id}
+            )
+
+            link_res = await client.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/createChatInviteLink",
+                json={
+                    "chat_id": VIP_CHAT_ID,
+                    "member_limit": 1,
+                    "expire_date": expire_ts
+                }
+            )
+            link_data = link_res.json()
+
+            if link_data.get("ok"):
+                invite_link = link_data["result"]["invite_link"]
+                await client.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    json={
+                        "chat_id": user_id,
+                        "text": (
+                            f"✅ <b>{body.package}</b> faollashtirildi!\n\n"
+                            f"👇 VIP kanalga kirish uchun tugmani bosing:"
+                        ),
+                        "parse_mode": "HTML",
+                        "reply_markup": {
+                            "inline_keyboard": [[
+                                {"text": "💎 VIP Kanalga kirish", "url": invite_link}
+                            ]]
+                        }
+                    }
+                )
+    except Exception:
+        pass
+
     # Faqat adminga xabar — foydalanuvchiga emas
     try:
         import httpx
@@ -238,6 +286,36 @@ async def uc_order(request: Request, body: UcOrderRequest):
     return {"ok": True, "order_id": order_id}
 
 
+class EarnTapRequest(BaseModel):
+    amount: int
+
+
+@app.post("/earn_tap")
+async def earn_tap(request: Request, body: EarnTapRequest):
+    """Tanga bosish orqali ishlangan summani DOIMIY ravishda (bazada)
+    balansga qo'shadi. Bu endpoint mavjud bo'lmasa, frontend pulni
+    faqat lokal holatda (localStorage) saqlaydi va keyingi
+    syncFromServer() chaqirilganda serverdagi (eski) balans bilan
+    almashtirib, lokal qo'shilgan pulni yo'qotib yuboradi."""
+    init_data = request.headers.get("X-Init-Data", "")
+    user = verify_init_data(init_data)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid initData")
+
+    user_id = user["id"]
+    db.ensure_user(user_id, user.get("username"), user.get("first_name"))
+
+    amount = max(0, min(body.amount, 5))  # xavfsizlik: bir so'rovda 5 dan ortiq bo'lmasin
+    result = db.add_earn_tap(user_id, amount, cap=500)
+
+    return {
+        "ok": True,
+        "added": result["added"],
+        "balance": result["balance"],
+        "earn_today": result["earn_today"]
+    }
+
+
 # ── ADMIN PANEL endpointlari ────────────────────────────────
 @app.get("/admin/orders")
 async def admin_list_orders(request: Request, status: str = "pending"):
@@ -303,4 +381,4 @@ async def serve_admin_panel():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
-            
+                      
