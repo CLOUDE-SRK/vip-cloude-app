@@ -21,9 +21,6 @@ app = FastAPI()
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = int(os.environ["ADMIN_ID"])
 
-# Admin panel uchun ALOHIDA bot tokeni (admin_bot.py shu yerdagi
-# tokendan foydalanadi). Hozircha bo'sh bo'lishi mumkin - shunda
-# faqat asosiy bot orqali bo'lgan yo'l ishlaydi.
 ADMIN_BOT_TOKEN = os.environ.get("ADMIN_BOT_TOKEN", "")
 
 app.add_middleware(
@@ -35,7 +32,6 @@ app.add_middleware(
 
 
 def _verify_init_data_with_token(init_data: str, bot_token: str) -> dict | None:
-    """Berilgan bot tokeni bilan Telegram initData ni tekshiradi."""
     if not bot_token:
         return None
     vals = dict(parse_qsl(init_data, keep_blank_values=True))
@@ -43,7 +39,6 @@ def _verify_init_data_with_token(init_data: str, bot_token: str) -> dict | None:
     if not received_hash:
         return None
 
-    # auth_date eskirganini tekshirish (24 soatdan eski bo'lsa rad etamiz)
     auth_date = vals.get("auth_date")
     if auth_date:
         try:
@@ -67,15 +62,10 @@ def _verify_init_data_with_token(init_data: str, bot_token: str) -> dict | None:
 
 
 def verify_init_data(init_data: str) -> dict | None:
-    """Asosiy bot (foydalanuvchi webapp) uchun initData tekshiradi."""
     return _verify_init_data_with_token(init_data, BOT_TOKEN)
 
 
 def verify_admin_init_data(init_data: str) -> dict | None:
-    """Admin panel uchun initData tekshiradi:
-    1) Imzo to'g'ri bo'lishi kerak (admin botning O'Z tokeni bilan)
-    2) Yuboruvchi user_id ADMIN_ID ga teng bo'lishi kerak
-    Shu ikkisi bajarilmasa - kirish rad etiladi."""
     user = _verify_init_data_with_token(init_data, ADMIN_BOT_TOKEN)
     if not user:
         return None
@@ -103,13 +93,11 @@ async def get_balance(request: Request):
     db.ensure_user(user_id, user.get("username"), user.get("first_name"))
     balance = db.get_balance(user_id)
 
-    # Vazifalar holati
     tasks_done = {}
     for key in ["tg", "ig", "yt"]:
         row = db.get_task(user_id, key)
         tasks_done[key] = (row and row["status"] == "done")
 
-    # Referrallar soni
     conn = db.get_conn()
     refs = conn.execute("SELECT refs FROM users WHERE user_id=?", (user_id,)).fetchone()
     conn.close()
@@ -124,9 +112,6 @@ async def get_balance(request: Request):
 
 @app.get("/history")
 async def get_history(request: Request):
-    """Foydalanuvchining 'Tranzaksiyalar' bo'limi uchun barcha
-    tarixi (UC xaridlar, VIP xaridlar, hisob to'ldirishlar),
-    har birining HAQIQIY (serverdagi) holati bilan birga."""
     init_data = request.headers.get("X-Init-Data", "")
     user = verify_init_data(init_data)
     if not user:
@@ -139,7 +124,6 @@ async def get_history(request: Request):
 
 @app.get("/leaderboard")
 async def get_leaderboard():
-    """Top 10 foydalanuvchi referral soniga qarab"""
     conn = db.get_conn()
     rows = conn.execute("""
         SELECT user_id, first_name, username, refs
@@ -171,9 +155,6 @@ class VipOrderRequest(BaseModel):
 
 @app.post("/buy_vip")
 async def buy_vip(request: Request, body: VipOrderRequest):
-    """Foydalanuvchi VIP paket sotib olganda webapp shu endpointga
-    so'rov yuboradi. Balansni tekshiradi, kamaytiradi va vip_orders
-    jadvaliga 'approved' holatda yozadi (shu bilan tarixda ko'rinadi)."""
     init_data = request.headers.get("X-Init-Data", "")
     user = verify_init_data(init_data)
     if not user:
@@ -188,6 +169,7 @@ async def buy_vip(request: Request, body: VipOrderRequest):
 
     order_id = db.create_vip_order(user_id, body.package, body.price)
 
+    # Faqat adminga xabar — foydalanuvchiga emas
     try:
         import httpx
         admin_text = (
@@ -216,10 +198,6 @@ class UcOrderRequest(BaseModel):
 
 @app.post("/uc_order")
 async def uc_order(request: Request, body: UcOrderRequest):
-    """Foydalanuvchi UC sotib olganda webapp shu endpointga HTTP
-    so'rov yuboradi (avvalgi tg.sendData() o'rniga). Bu yondashuv
-    ishonchli, chunki natija darhol (HTTP javob orqali) ma'lum bo'ladi -
-    Telegram update yetib bormay qolishi xavfi yo'q."""
     init_data = request.headers.get("X-Init-Data", "")
     user = verify_init_data(init_data)
     if not user:
@@ -231,18 +209,13 @@ async def uc_order(request: Request, body: UcOrderRequest):
 
     db.ensure_user(user_id, username, first_name)
 
-    # Balansni tekshir va kamayt (atomik - deduct_balance ichida tekshiradi)
     ok = db.deduct_balance(user_id, body.price)
     if not ok:
         raise HTTPException(status_code=400, detail="Balans yetarli emas")
 
-    # Buyurtmani bazaga 'pending' holida yozamiz - admin panel buni ko'radi
     order_id = db.create_uc_order(user_id, body.player_id, body.uc, body.price, 0)
 
-    # Adminga oddiy bildirishnoma (tugmasiz) - faqat xabardor qilish uchun.
-    # Asosiy tasdiqlash ADMIN PANEL orqali bo'ladi, shu xabar shart emas,
-    # lekin tezkor xabardorlik uchun foydali. Xato bersa ham buyurtma
-    # bazada saqlangani uchun jarayon davom etadi.
+    # Faqat adminga xabar — foydalanuvchiga emas
     try:
         import httpx
         admin_text = (
@@ -260,7 +233,7 @@ async def uc_order(request: Request, body: UcOrderRequest):
                 json={"chat_id": ADMIN_ID, "text": admin_text, "parse_mode": "HTML"}
             )
     except Exception:
-        pass  # bildirishnoma yetib bormasa ham buyurtma bazada qoladi
+        pass
 
     return {"ok": True, "order_id": order_id}
 
@@ -268,10 +241,6 @@ async def uc_order(request: Request, body: UcOrderRequest):
 # ── ADMIN PANEL endpointlari ────────────────────────────────
 @app.get("/admin/orders")
 async def admin_list_orders(request: Request, status: str = "pending"):
-    """Admin panel uchun buyurtmalar ro'yxati.
-    status='pending' -> faqat kutilayotganlar
-    status='all'     -> so'nggi 50 ta (holatidan qatiy nazar)
-    """
     require_admin(request)
 
     if status == "all":
@@ -298,9 +267,6 @@ async def admin_list_orders(request: Request, status: str = "pending"):
 
 @app.post("/admin/orders/{order_id}/approve")
 async def admin_approve_order(order_id: int, request: Request):
-    """Admin panelda 'Tasdiqlash' tugmasi bosilganda chaqiriladi.
-    Buyurtma holatini 'approved' ga o'zgartiradi va foydalanuvchiga
-    UC yuklanganini Telegram orqali xabar qiladi."""
     require_admin(request)
 
     order = db.get_uc_order(order_id)
@@ -311,28 +277,12 @@ async def admin_approve_order(order_id: int, request: Request):
 
     db.approve_uc_order(order_id)
 
-    try:
-        import httpx
-        text = (
-            f"✅ <b>{order['uc_amount']:,} UC</b> muvaffaqiyatli yuklandi! 🎮\n"
-            f"🕹 PUBG ID: <code>{order['pubg_id']}</code>"
-        )
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                json={"chat_id": order["user_id"], "text": text, "parse_mode": "HTML"}
-            )
-    except Exception:
-        pass
-
+    # Foydalanuvchiga xabar YUBORILMAYDI
     return {"ok": True}
 
 
 @app.post("/admin/orders/{order_id}/cancel")
 async def admin_cancel_order(order_id: int, request: Request):
-    """Admin panelda 'Bekor qilish' tugmasi bosilganda chaqiriladi.
-    Buyurtmani bekor qiladi, pulni foydalanuvchiga qaytaradi va
-    xabar beradi."""
     require_admin(request)
 
     result = db.cancel_uc_order(order_id)
@@ -341,30 +291,16 @@ async def admin_cancel_order(order_id: int, request: Request):
 
     db.add_balance(result["user_id"], result["price"])
 
-    try:
-        import httpx
-        text = f"❌ UC buyurtmangiz bekor qilindi. {result['price']:,} so'm hisobingizga qaytarildi."
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                json={"chat_id": result["user_id"], "text": text}
-            )
-    except Exception:
-        pass
-
+    # Foydalanuvchiga xabar YUBORILMAYDI
     return {"ok": True}
 
 
 @app.get("/admin")
 async def serve_admin_panel():
-    """Admin panel (admin.html) statik faylini qaytaradi.
-    Bu sahifaning o'zi ochiq, lekin undagi barcha API
-    so'rovlari (/admin/orders va h.k.) initData orqali
-    ADMIN_ID tekshiruvidan o'tishi shart - shuning uchun
-    sahifaning o'zini ochish xavfsiz."""
     return FileResponse("admin.html", media_type="text/html")
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+            
