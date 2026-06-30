@@ -145,8 +145,9 @@ async def get_history(request: Request):
 @app.get("/leaderboard")
 async def get_leaderboard():
     conn = db.get_conn()
+    now = int(time.time())
     rows = conn.execute("""
-        SELECT user_id, first_name, username, refs, avatar_url
+        SELECT user_id, first_name, username, refs, avatar_url, is_premium, premium_until
         FROM users
         WHERE refs > 0
         ORDER BY refs DESC
@@ -158,12 +159,14 @@ async def get_leaderboard():
     for row in rows:
         name = row["first_name"] or row["username"] or "Foydalanuvchi"
         initials = name[:2].upper()
+        premium_active = bool(row["is_premium"]) and (not row["premium_until"] or row["premium_until"] >= now)
         result.append({
             "user_id": row["user_id"],
             "name": name,
             "initials": initials,
             "refs": row["refs"],
-            "avatar_url": row["avatar_url"]
+            "avatar_url": row["avatar_url"],
+            "is_premium": premium_active
         })
 
     return result
@@ -614,61 +617,4 @@ async def admin_add_balance(user_id: int, request: Request, body: AddBalanceBody
     try:
         import httpx
         async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                json={
-                    "chat_id": user_id,
-                    "text": f"💰 Hisobingizga {body.amount:,} so'm qo'shildi."
-                }
-            )
-    except Exception:
-        pass
-
-    return {"ok": True}
-
-
-class GiftPremiumBody(BaseModel):
-    duration: str  # '15kun' | '1oy' | '1sezon'
-
-
-@app.post("/admin/profile/{user_id}/gift_premium")
-async def admin_gift_premium(user_id: int, request: Request, body: GiftPremiumBody):
-    require_admin(request)
-    row = db.get_profile_admin(user_id)
-    if not row:
-        raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi")
-
-    new_until = db.gift_premium(user_id, body.duration)
-    if new_until is None:
-        raise HTTPException(status_code=400, detail="Noto'g'ri muddat")
-
-    label = {"15kun": "15 kunlik", "1oy": "1 oylik", "1sezon": "1 sezonlik"}.get(body.duration, body.duration)
-
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                json={
-                    "chat_id": user_id,
-                    "text": (
-                        f"🎁 Sizga <b>{label} Premium</b> sovg'a qilindi!\n\n"
-                        f"✨ Endi profilga rasm qo'ya olasiz va pul ishlashda 2x tezroq ishlay olasiz."
-                    ),
-                    "parse_mode": "HTML"
-                }
-            )
-    except Exception:
-        pass
-
-    return {"ok": True, "premium_until": new_until}
-
-
-@app.get("/admin")
-async def serve_admin_panel():
-    return FileResponse("admin.html", media_type="text/html")
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+            awai
