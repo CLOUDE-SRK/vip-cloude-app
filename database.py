@@ -69,6 +69,18 @@ def init_db():
         )
     """)
 
+    # Tanga bosish (earn) loglari — har bir bosishda qancha qo'shilgani
+    # yoziladi, shu orqali "bugungi ishlangan summa" hisoblanadi va
+    # kunlik limit (cap) server tarafida ham nazorat qilinadi.
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS earn_log (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER,
+            amount      INTEGER,
+            created_at  INTEGER DEFAULT (strftime('%s','now'))
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -102,6 +114,65 @@ def add_balance(user_id: int, amount: int):
     conn.execute("UPDATE users SET balance = balance + ? WHERE user_id=?", (amount, user_id))
     conn.commit()
     conn.close()
+
+def get_earn_today(user_id: int) -> int:
+    """Bugungi (UTC kalendar kuni) tanga bosish orqali ishlangan
+    summani qaytaradi. earn_log jadvalidagi bugungi yozuvlarni
+    yig'indilaydi."""
+    conn = get_conn()
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) as total FROM earn_log
+        WHERE user_id=? AND date(created_at, 'unixepoch') = date('now')
+        """,
+        (user_id,)
+    ).fetchone()
+    conn.close()
+    return row["total"] if row else 0
+
+def add_earn_tap(user_id: int, amount: int, cap: int = 500) -> dict:
+    """Tanga bosishdan kelgan miqdorni qo'shadi, lekin bugungi limitdan
+    (cap) oshirib yubormaydi. Haqiqiy qo'shilgan miqdor, yangi balans
+    va bugungi jami ishlangan summani qaytaradi. Bu funksiya
+    /earn_tap endpointi tomonidan chaqiriladi - shu orqali tanga
+    bosish orqali to'plangan pul ham balansga DOIMIY (bazada) saqlanadi,
+    keyinchalik syncFromServer() balansni o'chirib yubormaydi."""
+    conn = get_conn()
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) as total FROM earn_log
+        WHERE user_id=? AND date(created_at, 'unixepoch') = date('now')
+        """,
+        (user_id,)
+    ).fetchone()
+    earned_today = row["total"] if row else 0
+
+    remaining = max(0, cap - earned_today)
+    actual_amount = min(max(0, amount), remaining)
+
+    if actual_amount > 0:
+        conn.execute(
+            "INSERT INTO earn_log (user_id, amount) VALUES (?,?)",
+            (user_id, actual_amount)
+        )
+        conn.execute(
+            "UPDATE users SET balance = balance + ? WHERE user_id=?",
+            (actual_amount, user_id)
+        )
+
+    new_balance_row = conn.execute(
+        "SELECT balance FROM users WHERE user_id=?", (user_id,)
+    ).fetchone()
+    new_balance = new_balance_row["balance"] if new_balance_row else 0
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "added": actual_amount,
+        "balance": new_balance,
+        "earn_today": earned_today + actual_amount
+    }
 
 def deduct_balance(user_id: int, amount: int) -> bool:
     conn = get_conn()
