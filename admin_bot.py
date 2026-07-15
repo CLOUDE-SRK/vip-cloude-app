@@ -19,15 +19,15 @@ admin_dp  = Dispatcher(admin_bot)
 async def admin_cmd_start(message: types.Message):
     # Faqat ADMIN_ID ushbu botdan foydalana oladi - boshqa hech kim emas.
     if message.from_user.id != ADMIN_ID:
-        await message.answer("🚫 Bu bot faqat administratorlar uchun.")
+        await message.answer("🚫 Bu bot faqat ᴵᴬᴹ𝘾𝙇𝙊𝙐𝘿𝙀 uchun.")
         return
 
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton(
-        text="Admin panelni ochish",
+        text="Boshqaruv panelni ochish",
         web_app=WebAppInfo(url=ADMIN_WEBAPP_URL)
     ))
-    await message.answer("VIP CLOUDE — Admin panel", reply_markup=kb)
+    await message.answer("VIP CLOUDE — Boshqaruv paneli", reply_markup=kb)
 
 
 # Bu fayl ikki holatda ishlatilishi mumkin:
