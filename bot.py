@@ -50,16 +50,7 @@ async def cmd_start(message: types.Message):
         web_app=WebAppInfo(url=WEBAPP_URL)
     ))
 
-    caption = (
-        "<b>CLOUDE VIP PREMIUM 💎</b>\n\n"
-        "<b>Bu bot nimalar qila oladi?</b>\n\n"
-        "➡️ PUBG UC sotib olish\n"
-        "➡️ VIP kanalga obuna (15 kunlik / 1 oylik / sezon)\n"
-        "➡️ Balansni to'ldirish\n"
-        "➡️ Do'stlarni taklif qilib bonus olish\n"
-        "➡️ Vazifalarni bajarib mukofot yutish\n\n"
-        "Boshlash uchun pastdagi tugmani bosing 👇"
-    )
+    caption = "Marhamat ilovaga kirish uchun bosing👇"
 
     photo_path = "start_banner.png"  # bot.py bilan bir xil papkada turishi kerak
     with open(photo_path, "rb") as photo:
@@ -327,4 +318,4 @@ async def task_no(call: types.CallbackQuery):
 if __name__ == "__main__":
     db.init_db()
     executor.start_polling(dp, skip_updates=True)
-            
+    
