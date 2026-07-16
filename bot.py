@@ -113,7 +113,7 @@ async def cmd_start(message: types.Message):
 @dp.callback_query_handler(lambda c: c.data == "announce_start")
 async def announce_start(call: types.CallbackQuery):
     if call.from_user.id != ADMIN_ID:
-        return await call.answer("❌ Bu tugma faqat admin uchun", show_alert=True)
+        return await call.answer("❌ Bu boʻlim faqat ᴵᴬᴹ𝘾𝙇𝙊𝙐𝘿𝙀 uchun", show_alert=True)
     pending_announcement.add(call.from_user.id)
     await call.answer()
     await bot.send_message(ADMIN_ID, "📢 Marhamat, e'loningizni kiriting:")
