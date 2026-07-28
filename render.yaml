@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: cloude-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: VIP_CHAT_ID
+        sync: false
+      - key: WEBAPP_URL
+        sync: false
+      # DIQQAT: admin_bot.py bu ikkisini os.environ["..."] orqali
+      # to'g'ridan-to'g'ri o'qiydi (ya'ni .get() emas) — agar Render
+      # Dashboard'da bular hozircha sozlanmagan bo'lsa, admin_bot.py
+      # ishga tushgan zahoti KeyError bilan yiqiladi va main.py uni
+      # har 5 soniyada qayta-qayta ishga tushirishga urinib, cheksiz
+      # "crash-loop"ga tushib qoladi (CPU behuda sarflanadi). Render
+      # Dashboard -> Environment bo'limida bu ikkisi ALBATTA borligini
+      # tekshiring.
+      - key: ADMIN_BOT_TOKEN
+        sync: false
+      - key: ADMIN_WEBAPP_URL
+        sync: false
+      # ESKI: DB_PATH va pastdagi 'disk' bloki SQLite fayli uchun edi.
+      # Endi ma'lumotlar bazasi Supabase'da (Render konteynerdan tashqarida)
+      # saqlanadi, shuning uchun bular olib tashlandi — DB_PATH endi
+      # database.py tomonidan umuman o'qilmaydi.
+      - key: DATABASE_URL
+        sync: false
