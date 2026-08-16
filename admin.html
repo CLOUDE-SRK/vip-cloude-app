@@ -202,41 +202,41 @@
 
 <header>
   <h1> ᴵᴬᴹ𝘾𝙇𝙊𝙐𝘿𝙀 </h1>
-  <div class="subtitle">Boshqaruv paneli</div>
+  <div class="subtitle">𝗕𝗢𝗦𝗛𝗤𝗔𝗥𝗨𝗩 𝗣𝗔𝗡𝗘𝗟𝗜</div>
 </header>
 
 <div class="topbar">
-  <div class="topbtn active" data-tab="orders" onclick="switchTab('orders')">🗃️ Buyurtmalar</div>
-  <div class="topbtn" data-tab="topups" onclick="switchTab('topups')">💳 Pul o'tkazmalar</div>
-  <div class="topbtn" data-tab="verify" onclick="switchTab('verify')">⏳ Referal so'rovlari</div>
-  <div class="topbtn" data-tab="tasks" onclick="switchTab('tasks')">✅ Vazifalar</div>
-  <div class="topbtn" data-tab="top" onclick="switchTab('top')">🏆 Top o'yinchilar</div>
-  <div class="topbtn" data-tab="profile" onclick="switchTab('profile')">👤 Profil</div>
+  <div class="topbtn active" data-tab="orders" onclick="switchTab('orders')">𝗨𝗖 𝗫𝗔𝗥𝗜𝗗𝗟𝗔𝗥</div>
+  <div class="topbtn" data-tab="topups" onclick="switchTab('topups')">𝗣𝗨𝗟 𝗢'𝗧𝗞𝗔𝗭𝗠𝗔𝗟𝗔𝗥</div>
+  <div class="topbtn" data-tab="verify" onclick="switchTab('verify')">𝗩𝗔𝗭𝗜𝗙𝗔 𝗦𝗢'𝗥𝗢𝗩𝗟𝗔𝗥</div>
+  <div class="topbtn" data-tab="tasks" onclick="switchTab('tasks')">𝗩𝗔𝗭𝗜𝗙𝗔 𝗤𝗢'𝗦𝗛𝗜𝗦𝗛</div>
+  <div class="topbtn" data-tab="top" onclick="switchTab('top')">𝗧𝗢𝗣 𝗢'𝗬𝗜𝗡𝗖𝗛𝗜𝗟𝗔𝗥</div>
+  <div class="topbtn" data-tab="profile" onclick="switchTab('profile')">𝗣𝗥𝗢𝗙𝗜𝗟</div>
 </div>
 
 <!-- 1. BUYURTMALAR -->
 <div class="page active" id="page-orders">
   <div class="topbar" style="border:none;padding:10px 0;">
-    <div class="topbtn active" id="ord-pending" onclick="setOrdersFilter('pending')">Kutilayotgan</div>
-    <div class="topbtn" id="ord-all" onclick="setOrdersFilter('all')">Hammasi</div>
+    <div class="topbtn active" id="ord-pending" onclick="setOrdersFilter('pending')">𝗞𝘂𝘁𝗶𝗹𝗮𝘆𝗼𝘁𝗴𝗮𝗻𝗹𝗮𝗿</div>
+    <div class="topbtn" id="ord-all" onclick="setOrdersFilter('all')">𝗛𝗮𝗺𝗺𝗮𝘀𝗶</div>
   </div>
-  <button class="refresh-btn" onclick="loadOrders()">🔄 Yangilash</button>
+  <button class="refresh-btn" onclick="loadOrders()">🔄 𝗬𝗮𝗻𝗴𝗶𝗹𝗮𝘀𝗵</button>
   <div id="ordersList"></div>
 </div>
 
 <!-- 1b. PUL O'TKAZMALAR -->
 <div class="page" id="page-topups">
   <div class="topbar" style="border:none;padding:10px 0;">
-    <div class="topbtn active" id="tp-pending" onclick="setTopupsFilter('pending')">Kutilayotgan</div>
-    <div class="topbtn" id="tp-all" onclick="setTopupsFilter('all')">Hammasi</div>
+    <div class="topbtn active" id="tp-pending" onclick="setTopupsFilter('pending')">𝗞𝘂𝘁𝗶𝗹𝗮𝘆𝗼𝘁𝗴𝗮𝗻𝗹𝗮𝗿</div>
+    <div class="topbtn" id="tp-all" onclick="setTopupsFilter('all')">𝗛𝗮𝗺𝗺𝗮𝘀𝗶</div>
   </div>
-  <button class="refresh-btn" onclick="loadTopups()">🔄 Yangilash</button>
+  <button class="refresh-btn" onclick="loadTopups()">🔄 𝗬𝗮𝗻𝗴𝗶𝗹𝗮𝘀𝗵</button>
   <div id="topupsList"></div>
 </div>
 
 <!-- 2. REFERAL SO'ROVLARI -->
 <div class="page" id="page-verify">
-  <button class="refresh-btn" onclick="loadVerifyRequests()">🔄 Yangilash</button>
+  <button class="refresh-btn" onclick="loadVerifyRequests()">🔄 𝗬𝗮𝗻𝗴𝗶𝗹𝗮𝘀𝗵</button>
   <div id="verifyList"></div>
 </div>
 
