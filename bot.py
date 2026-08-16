@@ -117,7 +117,7 @@ async def cmd_start(message: types.Message):
     else:
         kb.row(
             InlineKeyboardButton("📢 Bizning kanal", url="https://t.me/CLOUDE_CHEATS"),
-            InlineKeyboardButton("🤖 Isbot kanal", url="https://t.me/isbotCLOUDEVIP"),
+            InlineKeyboardButton("💯 Isbot kanal", url="https://t.me/isbotCLOUDEVIP"),
         )
 
     photo_path = "start_banner.png"  # bot.py bilan bir xil papkada turishi kerak
