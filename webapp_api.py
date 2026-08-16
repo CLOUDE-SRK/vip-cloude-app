@@ -162,14 +162,14 @@ VIP_PACKAGES = {
 }
 
 UC_PACKAGES = [
-    {"uc": 60,   "price": 11999},
-    {"uc": 120,  "price": 24999},
-    {"uc": 180,  "price": 39000},
-    {"uc": 325,  "price": 59000},
-    {"uc": 660,  "price": 115000},
-    {"uc": 1800, "price": 299000},
-    {"uc": 3830, "price": 569000},
-    {"uc": 8100, "price": 1199000},
+    {"uc": 60,   "price": 11900},
+    {"uc": 120,  "price": 23900},
+    {"uc": 180,  "price": 34900},
+    {"uc": 325,  "price": 57900},
+    {"uc": 660,  "price": 115900},
+    {"uc": 1800, "price": 288900},
+    {"uc": 3850, "price": 575900},
+    {"uc": 8100, "price": 1115900},
 ]
 
 # bot.py dagi TASK_REWARDS bilan bir xil bo'lishi kerak
