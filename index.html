@@ -70,7 +70,7 @@
        balandligini + qurilma status-bar zonasini + qo'shimcha
        bufer (24px) qo'shib qo'yamiz.
        JS orqali --tg-content-safe-area-top o'zgaruvchisi yangilanadi. */
-    padding-top: calc(14px + env(safe-area-inset-top, 0px) + var(--tg-content-safe-area-top, 0px) + 4px);
+    padding-top: calc(14px + env(safe-area-inset-top, 0px) + var(--tg-content-safe-area-top, 0px) + 10px);
   }
   .hud-id{
     display:flex; align-items:center; gap:10px;
@@ -463,7 +463,7 @@
        ishora (gesture) zonasi bilan ustma-ust tushib qolmasligi
        uchun, qurilma xavfsiz zonasi (env) + Telegram xavfsiz
        zonasini pastki bo'shliqqa qo'shamiz. */
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-bottom, 0px) + 2px);
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-bottom, 0px) + -50px);
     background:rgba(13,18,30,0.85);
     backdrop-filter: blur(18px);
     border-top:1px solid var(--line);
