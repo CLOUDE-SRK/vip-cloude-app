@@ -840,7 +840,7 @@ async def buy_premium(request: Request, body: BuyPremiumRequest):
                 json={
                     "chat_id": user_id,
                     "text": (
-                        f"👑 <b>Premium ({pkg['name']})</b> faollashtirildi!\n\n"
+                        f"⭐ <b>Premium ({pkg['name']})</b> faollashtirildi!\n\n"
                         f"Endi profil avatarini o'rnatishingiz, ism yonida Premium belgisi "
                         f"va kunlik x2 Boost imkoniyatlaridan foydalanishingiz mumkin."
                     ),
