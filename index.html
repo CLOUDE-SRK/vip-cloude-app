@@ -708,13 +708,13 @@
   .baraban-prize-card{flex:0 0 auto; width:78px; padding:12px 6px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line); display:flex; flex-direction:column; align-items:center; gap:6px;}
   .baraban-prize-card .bpc-icon{font-size:24px;}
   .baraban-prize-card .bpc-name{font-family:'Rajdhani'; font-weight:700; font-size:10.5px; color:var(--text); text-align:center; line-height:1.2;}
-  .baraban-winners-list{width:100%; max-width:340px; display:flex; flex-direction:column; gap:8px;}
+  .baraban-winners-list{width:100%; max-width:340px; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-right:2px;}
   .baraban-winner-row{display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px;}
   .baraban-winner-avatar{width:34px; height:34px; border-radius:50%; background:var(--panel); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--cyan); flex-shrink:0;}
   .baraban-winner-info{flex:1; min-width:0;}
   .baraban-winner-name{font-family:'Rajdhani'; font-weight:700; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .baraban-winner-date{font-size:11px; color:var(--text-faint);}
-  .baraban-winner-prize{display:flex; align-items:center; gap:5px; font-family:'Rajdhani'; font-weight:700; font-size:12px; color:var(--gold); flex-shrink:0;}
+  .baraban-winner-prize{display:flex; align-items:center; gap:5px; font-family:'Rajdhani'; font-weight:700; font-size:11px; letter-spacing:0.3px; text-transform:uppercase; color:var(--gold); flex-shrink:0; background:var(--gold-dim); border:1px solid var(--gold-dim); border-radius:20px; padding:6px 12px; white-space:nowrap;}
   .baraban-empty{color:var(--text-faint); font-size:13px; text-align:center; padding:10px 0 4px;}
   .baraban-insufficient-overlay{position:fixed; inset:0; z-index:9998; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,0.72); backdrop-filter:blur(6px);}
   .baraban-insufficient-overlay.show{display:flex;}
@@ -3274,7 +3274,7 @@ function renderBarabanWinners(){
     list.innerHTML = `<div class="baraban-empty">Hozircha g'oliblar yo'q</div>`;
     return;
   }
-  list.innerHTML = barabanState.winners.map(w => {
+  list.innerHTML = barabanState.winners.slice(0, 8).map(w => {
     const name = w.first_name || 'Foydalanuvchi';
     const initial = name.charAt(0).toUpperCase();
     const dt = w.created_at ? new Date(w.created_at * 1000) : null;
