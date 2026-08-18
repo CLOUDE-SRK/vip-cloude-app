@@ -1697,7 +1697,7 @@
         <div class="list-arrow">›</div>
       </div>
 
-      <div class="security-note">🔒 Toʻlov usulini tanlagach, rekvizitlar koʻrsatiladi. Toʻlovni amalga oshirib, skrinshotni botga yuboring.</div>
+      <div class="security-note">🔒 Toʻlov usulini tanlagach, rekvizitlar koʻrsatiladi. Toʻlovni amalga oshirib, chekni yuboring.</div>
     </div>
   </div>
 
@@ -1717,7 +1717,7 @@
       <div class="topup-timer-box" id="topupTimerBox">
         <div class="topup-timer-row" id="topupTimerRow">
           <span>⏱ Karta amal qiladi</span>
-          <span id="topupTimerValue">10:00</span>
+          <span id="topupTimerValue">05:00</span>
         </div>
         <div class="topup-timer-bar"><div class="topup-timer-fill" id="topupTimerFill"></div></div>
       </div>
@@ -1747,7 +1747,7 @@
         <div class="topup-success-title">Chek yuborildi!</div>
         <div class="topup-success-sub">Tez orada tekshirilib, balansingizga tushiriladi.</div>
       </div>
-      <button class="pay-cta" style="margin-top:26px;" onclick="closeTopupSuccessAndGoHome()">🏠 Bosh menyu</button>
+      <button class="pay-cta" style="margin-top:26px;" onclick="closeTopupSuccessAndGoHome()">Bosh menyu</button>
     </div>
   </div>
 
@@ -3345,7 +3345,7 @@ function showBarabanResult(prize){
   const name = prize.name || '';
   let note = '';
   if(name.includes("so'm")){
-    note = "✅ Balansingizga avtomatik qo'shildi";
+    note = "✅ Balansingizga qo'shildi";
   } else if(id.startsWith('baraban_uc')){
     note = "🎟️ Bir martalik voucher yaratildi — \"UC sotib olish\" bo'limida shu miqdorni 0 so'mga oling";
   } else if(id.startsWith('baraban_disc')){
